@@ -879,142 +879,152 @@ function renderCMC() {
 
 function renderMatchups() {
     const el = document.getElementById('view-matchups');
+    let h = '<h2 style="margin-bottom:1rem;color:var(--accent)">\u2694\uFE0F Matchup Analysis</h2>';
+    h += '<p style="color:var(--text-dim);margin-bottom:1rem">Wybierz swojego gracza i przeciwnika - zobaczysz ktore decki dzialaja w tym matchupie.</p>';
+    h += '<div style="display:flex;gap:2rem;flex-wrap:wrap;margin-bottom:1.5rem">';
+    h += '<div><label style="color:var(--text-dim);font-size:.85rem">Ty:</label><div class="player-selector" id="mu-me"></div></div>';
+    h += '<div><label style="color:var(--text-dim);font-size:.85rem">Przeciwnik:</label><div class="player-selector" id="mu-opp"></div></div>';
+    h += '</div>';
+    h += '<div id="mu-detail"></div>';
+    el.innerHTML = h;
     
-    // Build matchup data: for each game, record which decks faced each other
-    const pairMatchups = {}; // "PlayerA:DeckA vs PlayerB:DeckB" -> {games, a_wins, b_wins}
-    const playerDeckVsPlayer = {}; // "Nori:Prosper vs Saka" -> {games, wins, opp_wins}
-    const deckBeatsSaka = {}; // deck -> {games_vs_saka, beat_saka}
+    const meEl = document.getElementById('mu-me');
+    const oppEl = document.getElementById('mu-opp');
+    let selectedMe = ALL_PLAYERS[0], selectedOpp = ALL_PLAYERS[1];
+    
+    ALL_PLAYERS.forEach((p,i) => {
+        const btn1 = document.createElement('button');
+        btn1.className = 'player-btn' + (i===0?' active':'');
+        btn1.textContent = p; btn1.style.borderColor = PLAYER_COLORS[p]||'#666';
+        btn1.onclick = () => { meEl.querySelectorAll('.player-btn').forEach(b=>b.classList.remove('active')); btn1.classList.add('active'); selectedMe=p; renderMU(selectedMe,selectedOpp); };
+        meEl.appendChild(btn1);
+        
+        const btn2 = document.createElement('button');
+        btn2.className = 'player-btn' + (i===1?' active':'');
+        btn2.textContent = p; btn2.style.borderColor = PLAYER_COLORS[p]||'#666';
+        btn2.onclick = () => { oppEl.querySelectorAll('.player-btn').forEach(b=>b.classList.remove('active')); btn2.classList.add('active'); selectedOpp=p; renderMU(selectedMe,selectedOpp); };
+        oppEl.appendChild(btn2);
+    });
+    
+    renderMU(selectedMe, selectedOpp);
+}
+
+function renderMU(me, opp) {
+    const el = document.getElementById('mu-detail');
+    if (me === opp) { el.innerHTML = '<div class="card"><p>Wybierz dwoch roznych graczy.</p></div>'; return; }
+    
+    const colMe = PLAYER_COLORS[me]||'#666', colOpp = PLAYER_COLORS[opp]||'#666';
+    
+    // Build matchup data from games where both players are present
+    const myDeckVsOpp = {}; // myDeck -> {games, myWins, oppWins}
+    const oppDeckVsMe = {}; // oppDeck -> {games, oppWins, myWins}
+    const deckVsDeck = {};  // myDeck|oppDeck -> {games, myWins, oppWins}
+    let totalGames = 0, myTotalWins = 0, oppTotalWins = 0;
     
     RAW_GAMES.forEach(g => {
-        const hasSaka = g.players.some(p=>p.name==='Saka');
-        g.players.forEach((p1,i) => {
-            g.players.forEach((p2,j) => {
-                if (i>=j) return;
-                // Track deck vs specific player
-                const key1 = p1.name+':'+p1.deck+' vs '+p2.name;
-                const key2 = p2.name+':'+p2.deck+' vs '+p1.name;
-                if(!playerDeckVsPlayer[key1]) playerDeckVsPlayer[key1]={games:0,wins:0,opp_wins:0,deck:p1.deck,player:p1.name,opponent:p2.name};
-                if(!playerDeckVsPlayer[key2]) playerDeckVsPlayer[key2]={games:0,wins:0,opp_wins:0,deck:p2.deck,player:p2.name,opponent:p1.name};
-                playerDeckVsPlayer[key1].games++; playerDeckVsPlayer[key2].games++;
-                if(g.winner===p1.name){playerDeckVsPlayer[key1].wins++;playerDeckVsPlayer[key2].opp_wins++;}
-                if(g.winner===p2.name){playerDeckVsPlayer[key2].wins++;playerDeckVsPlayer[key1].opp_wins++;}
-            });
-            // Saka killer tracking
-            if(hasSaka && p1.name!=='Saka') {
-                if(!deckBeatsSaka[p1.deck]) deckBeatsSaka[p1.deck]={games:0,wins:0};
-                deckBeatsSaka[p1.deck].games++;
-                if(g.winner===p1.name) deckBeatsSaka[p1.deck].wins++;
-            }
-        });
+        const pmap = {}; g.players.forEach(p => { pmap[p.name] = p.deck; });
+        if (!pmap[me] || !pmap[opp]) return;
+        totalGames++;
+        const myDeck = pmap[me], oppDeck = pmap[opp];
+        const iWon = g.winner===me, oppWon = g.winner===opp;
+        if(iWon) myTotalWins++; if(oppWon) oppTotalWins++;
+        
+        if(!myDeckVsOpp[myDeck]) myDeckVsOpp[myDeck]={games:0,wins:0,oppWins:0};
+        myDeckVsOpp[myDeck].games++; if(iWon) myDeckVsOpp[myDeck].wins++; if(oppWon) myDeckVsOpp[myDeck].oppWins++;
+        
+        if(!oppDeckVsMe[oppDeck]) oppDeckVsMe[oppDeck]={games:0,oppWins:0,myWins:0};
+        oppDeckVsMe[oppDeck].games++; if(oppWon) oppDeckVsMe[oppDeck].oppWins++; if(iWon) oppDeckVsMe[oppDeck].myWins++;
+        
+        const dvd = myDeck+'|'+oppDeck;
+        if(!deckVsDeck[dvd]) deckVsDeck[dvd]={games:0,myWins:0,oppWins:0,myDeck,oppDeck};
+        deckVsDeck[dvd].games++; if(iWon) deckVsDeck[dvd].myWins++; if(oppWon) deckVsDeck[dvd].oppWins++;
     });
     
-    let h = '<h2 style="margin-bottom:1.5rem;color:var(--accent)">\u2694\uFE0F Matchup Analysis</h2>';
-    h += '<p style="color:var(--text-dim);margin-bottom:1.5rem">Analiza deck-vs-player: kiedy Saka gra konkretnym deckiem, czym najlepiej odpowiedziec?</p>';
+    if(totalGames===0){el.innerHTML='<div class="card"><p>Brak wspolnych gier.</p></div>';return;}
     
-    // === NORI vs SAKA ===
-    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83e\udd4a Nori decks vs Saka (agregacja)</h3>';
-    h += '<table><tr><th>Nori Deck</th><th>Gry vs Saka</th><th>Nori W</th><th>Saka W</th><th>Nori WR</th><th>Saka WR</th><th>Wynik</th></tr>';
+    let h = '';
     
-    const noriVsSaka = Object.values(playerDeckVsPlayer).filter(d=>d.player==='Nori'&&d.opponent==='Saka');
-    // Aggregate by deck
-    const noriDeckVsSaka = {};
-    noriVsSaka.forEach(d => {
-        if(!noriDeckVsSaka[d.deck]) noriDeckVsSaka[d.deck]={games:0,wins:0,opp_wins:0};
-        noriDeckVsSaka[d.deck].games+=d.games; noriDeckVsSaka[d.deck].wins+=d.wins; noriDeckVsSaka[d.deck].opp_wins+=d.opp_wins;
-    });
-    Object.entries(noriDeckVsSaka).sort((a,b)=>b[1].wins/b[1].games-a[1].wins/a[1].games).forEach(([deck,s])=>{
+    // Summary
+    const myWR = (100*myTotalWins/totalGames).toFixed(0);
+    const oppWR = (100*oppTotalWins/totalGames).toFixed(0);
+    h += '<div class="card" style="margin-bottom:1.5rem"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">';
+    h += `<div style="text-align:center"><span style="font-size:2rem;color:${colMe}">${me}</span><br><span class="badge badge-win" style="font-size:1.2rem">${myWR}%</span><br><span style="color:var(--text-dim)">${myTotalWins} wygranych</span></div>`;
+    h += `<div style="text-align:center"><span style="font-size:1.5rem;color:var(--text-dim)">${totalGames} gier</span><br>`;
+    const barPct = Math.round(100*myTotalWins/(myTotalWins+oppTotalWins+0.01));
+    h += `<div style="width:200px;height:16px;background:${colOpp};border-radius:8px;overflow:hidden;margin:.5rem auto"><div style="height:100%;width:${barPct}%;background:${colMe}"></div></div>`;
+    h += `<span style="color:var(--text-dim);font-size:.8rem">(ktos inny wygral ${totalGames-myTotalWins-oppTotalWins}x)</span></div>`;
+    h += `<div style="text-align:center"><span style="font-size:2rem;color:${colOpp}">${opp}</span><br><span class="badge badge-loss" style="font-size:1.2rem">${oppWR}%</span><br><span style="color:var(--text-dim)">${oppTotalWins} wygranych</span></div>`;
+    h += '</div></div>';
+    
+    // My decks vs opponent
+    h += '<div class="grid grid-2">';
+    h += `<div class="card"><h3 style="color:${colMe}">${me}: decki vs ${opp}</h3>`;
+    h += '<table><tr><th>Deck</th><th>Gry</th><th>Moj WR</th><th>'+opp+' WR</th><th></th></tr>';
+    Object.entries(myDeckVsOpp).sort((a,b)=>b[1].wins/b[1].games-a[1].wins/a[1].games).forEach(([deck,s])=>{
         if(s.games<2)return;
-        const nwr=(100*s.wins/s.games).toFixed(0);
-        const swr=(100*s.opp_wins/s.games).toFixed(0);
-        const verdict=s.wins>s.opp_wins?'\u2705':s.wins===s.opp_wins?'\u2796':'\u274c';
-        h+=`<tr><td><strong>${deck}</strong></td><td>${s.games}</td><td>${s.wins}</td><td>${s.opp_wins}</td><td><span class="badge ${nwr>=30?'badge-win':'badge-loss'}">${nwr}%</span></td><td>${swr}%</td><td>${verdict}</td></tr>`;
+        const mwr=(100*s.wins/s.games).toFixed(0);
+        const owr=(100*s.oppWins/s.games).toFixed(0);
+        const icon=s.wins>s.oppWins?'\u2705':s.wins===s.oppWins?'\u2796':'\u274c';
+        h+=`<tr><td><strong>${deck}</strong></td><td>${s.games}</td><td><span class="badge ${mwr>=30?'badge-win':'badge-loss'}">${mwr}%</span></td><td>${owr}%</td><td>${icon}</td></tr>`;
     });
     h += '</table></div>';
     
-    // === SAKA DECKS vs NORI ===
-    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83c\udfaf Saka decks: ktore Nori bije najczesciej?</h3>';
-    h += '<table><tr><th>Saka Deck</th><th>Gry vs Nori</th><th>Saka W</th><th>Nori W</th><th>Nori WR vs ten deck</th><th></th></tr>';
-    
-    const sakaVsNori = Object.values(playerDeckVsPlayer).filter(d=>d.player==='Saka'&&d.opponent==='Nori');
-    const sakaDeckVsNori = {};
-    sakaVsNori.forEach(d => {
-        if(!sakaDeckVsNori[d.deck]) sakaDeckVsNori[d.deck]={games:0,wins:0,opp_wins:0};
-        sakaDeckVsNori[d.deck].games+=d.games; sakaDeckVsNori[d.deck].wins+=d.wins; sakaDeckVsNori[d.deck].opp_wins+=d.opp_wins;
-    });
-    Object.entries(sakaDeckVsNori).filter(([,s])=>s.games>=2).sort((a,b)=>b[1].opp_wins/b[1].games-a[1].opp_wins/a[1].games).forEach(([deck,s])=>{
-        const nwr=(100*s.opp_wins/s.games).toFixed(0);
-        const bar = Math.round(100*s.opp_wins/s.games);
-        const color = bar>=40?'var(--win)':bar>=25?'#ff9800':'var(--loss)';
-        h+=`<tr><td><strong>${deck}</strong></td><td>${s.games}</td><td>${s.wins}</td><td>${s.opp_wins}</td><td><div class="wr-bar" style="width:120px"><div class="wr-bar-fill" style="width:${bar}%;background:${color}"></div></div> ${nwr}%</td><td>${nwr>=40?'\ud83c\udf1f Target!':''}</td></tr>`;
+    // Opponent's decks - which I beat
+    h += `<div class="card"><h3 style="color:${colOpp}">${opp}: decki (moj WR vs nich)</h3>`;
+    h += '<table><tr><th>'+opp+' Deck</th><th>Gry</th><th>'+opp+' WR</th><th>Moj WR</th><th></th></tr>';
+    Object.entries(oppDeckVsMe).sort((a,b)=>b[1].myWins/b[1].games-a[1].myWins/a[1].games).forEach(([deck,s])=>{
+        if(s.games<2)return;
+        const mwr=(100*s.myWins/s.games).toFixed(0);
+        const owr=(100*s.oppWins/s.games).toFixed(0);
+        const icon=mwr>=40?'\ud83c\udf1f':mwr>=25?'':'\u26a0\ufe0f';
+        h+=`<tr><td><strong>${deck}</strong></td><td>${s.games}</td><td>${owr}%</td><td><span class="badge ${mwr>=30?'badge-win':'badge-loss'}">${mwr}%</span></td><td>${icon}</td></tr>`;
     });
     h += '</table></div>';
+    h += '</div>';
     
-    // === COUNTER-PICK GUIDE ===
-    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83d\udee1\uFE0F Counter-Pick Guide: Saka gra X, Nori odpowiada Y</h3>';
-    h += '<p style="color:var(--text-dim);margin-bottom:1rem">Konkretne matchupy deck-vs-deck (min 2 gry, Nori wygrywat min 1x)</p>';
+    // Deck vs Deck matrix (counter-pick guide)
+    h += `<div class="card" style="margin-top:1.5rem"><h3>\ud83d\udee1\ufe0f Counter-Pick: ${opp} gra X, ${me} odpowiada Y</h3>`;
+    h += '<p style="color:var(--text-dim);margin-bottom:1rem">Konkretne matchupy deck-vs-deck (min 2 gry)</p>';
     
-    // Build Nori deck vs Saka deck matrix
-    const matrix = {};
-    RAW_GAMES.forEach(g => {
-        const pmap = {};
-        g.players.forEach(p=>{pmap[p.name]=p.deck;});
-        if(pmap['Nori']&&pmap['Saka']){
-            const key=pmap['Nori']+'|'+pmap['Saka'];
-            if(!matrix[key])matrix[key]={games:0,nori:0,saka:0,noriDeck:pmap['Nori'],sakaDeck:pmap['Saka']};
-            matrix[key].games++;
-            if(g.winner==='Nori')matrix[key].nori++;
-            if(g.winner==='Saka')matrix[key].saka++;
-        }
+    // Group by opponent deck
+    const byOppDeck = {};
+    Object.values(deckVsDeck).forEach(m => {
+        if(m.games<2)return;
+        if(!byOppDeck[m.oppDeck]) byOppDeck[m.oppDeck]=[];
+        byOppDeck[m.oppDeck].push(m);
     });
     
-    // Group by Saka deck
-    const bysakaDeck = {};
-    Object.values(matrix).forEach(m=>{
-        if(!bysakaDeck[m.sakaDeck])bysakaDeck[m.sakaDeck]=[];
-        bysakaDeck[m.sakaDeck].push(m);
-    });
-    
-    Object.entries(bysakaDeck).sort((a,b)=>b[1].reduce((s,m)=>s+m.games,0)-a[1].reduce((s,m)=>s+m.games,0)).forEach(([sakaDeck,matches])=>{
-        const totalGames=matches.reduce((s,m)=>s+m.games,0);
-        if(totalGames<3)return;
-        const winners=matches.filter(m=>m.nori>0).sort((a,b)=>b.nori/b.games-a.nori/a.games);
-        h+=`<div style="margin-bottom:1rem;padding:.8rem;background:rgba(255,255,255,.03);border-radius:8px">`;
-        h+=`<strong style="color:${PLAYER_COLORS['Saka']}">Saka: ${sakaDeck}</strong> <span style="color:var(--text-dim)">(${totalGames} gier vs Nori)</span><br>`;
-        if(winners.length===0){h+=`<span style="color:var(--loss)">Brak counter-picka (Nori nigdy nie wygral)</span>`;}
-        else{winners.forEach(m=>{
-            const pct=(100*m.nori/m.games).toFixed(0);
-            h+=`<span style="margin-right:1rem">\u2192 <strong style="color:${PLAYER_COLORS['Nori']}">${m.noriDeck}</strong>: ${m.nori}/${m.games} (${pct}%) ${pct>=50?'\u2705':''}</span>`;
-        });}
+    Object.entries(byOppDeck).sort((a,b)=>b[1].reduce((s,m)=>s+m.games,0)-a[1].reduce((s,m)=>s+m.games,0)).forEach(([oppDeck,matches])=>{
+        h+=`<div style="margin-bottom:.8rem;padding:.6rem;background:rgba(255,255,255,.03);border-radius:8px">`;
+        h+=`<strong style="color:${colOpp}">${opp}: ${oppDeck}</strong> `;
+        const sorted = matches.sort((a,b)=>b.myWins/b.games-a.myWins/a.games);
+        sorted.forEach(m=>{
+            const pct=(100*m.myWins/m.games).toFixed(0);
+            const style=m.myWins>0?`color:${colMe}`:'color:var(--text-dim)';
+            h+=`<span style="margin-left:1rem;${style}">\u2192 ${m.myDeck}: ${m.myWins}/${m.games} ${pct>=50?'\u2705':''}</span>`;
+        });
         h+=`</div>`;
     });
     h += '</div>';
     
-    // === SAKA KILLERS ===
-    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83d\udca5 Saka Killers: decki ktore go bija</h3>';
-    h += '<div class="chart-container"><canvas id="ch-matchup-killers"></canvas></div></div>';
-    
-    // === KEY INSIGHTS ===
-    h += '<div class="card"><h3>\ud83e\udde0 Wnioski matchupowe</h3>';
-    h += '<div class="fun-fact">\u2705 <strong>Prosper vs Ulalek = 100%</strong> (2/2). Saka gra 5-kolorowym, Prosper jest za szybki i zbyt value-oriented.</div>';
-    h += '<div class="fun-fact">\u2705 <strong>Prosper remisuje z Saka ogolnie (44% vs 44%)</strong> - jedyny deck ktory trzyma z nim rownowage!</div>';
-    h += '<div class="fun-fact">\u2705 <strong>Krenko vs Satya = 67%</strong> (2/3). Aggro gobliny wyprzedzaja Satya w tempie.</div>';
-    h += '<div class="fun-fact">\u274c <strong>Krenko vs Killian = 17%</strong> (1/6). Killian to hardest counter - tani, kontrolny, dominuje.</div>';
-    h += '<div class="fun-fact">\u274c <strong>Sauron vs Saka = 12%</strong>. Niezaleznie od decku Saki, Sauron przegrywa prawie zawsze.</div>';
-    h += '<div class="fun-fact">\ud83c\udf1f <strong>Saka jest najslabszy z Ulalek (40% WR vs Nori)</strong> - to jedyny deck gdzie Nori dominuje!</div>';
-    h += '<div class="fun-fact">\ud83d\udee1 <strong>Strategia: Prosper na Ulalek/Boros, Krenko na Satya. Unikaj Killiana i Lyse.</strong></div>';
-    h += '</div>';
+    // Chart
+    h += '<div class="card" style="margin-top:1.5rem"><h3>\ud83d\udcca Wizualizacja</h3><div class="chart-container"><canvas id="ch-mu-bar"></canvas></div></div>';
     
     el.innerHTML = h;
     
-    // Saka Killers chart
-    const killers = Object.entries(deckBeatsSaka).filter(([,s])=>s.wins>=2).sort((a,b)=>b[1].wins/b[1].games-a[1].wins/a[1].games);
-    if(document.getElementById('ch-matchup-killers')){
-        new Chart(document.getElementById('ch-matchup-killers').getContext('2d'),{
+    // Render chart
+    if(document.getElementById('ch-mu-bar')){
+        const decks = Object.entries(myDeckVsOpp).filter(([,s])=>s.games>=2).sort((a,b)=>b[1].games-a[1].games);
+        new Chart(document.getElementById('ch-mu-bar').getContext('2d'),{
             type:'bar',
-            data:{labels:killers.map(([d])=>d),datasets:[
-                {label:'WR vs Saka',data:killers.map(([,s])=>(100*s.wins/s.games).toFixed(1)),backgroundColor:killers.map(([,s])=>100*s.wins/s.games>=30?'#4caf5088':'#ff980088')},
-            ]},
-            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{max:100,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}
+            data:{
+                labels:decks.map(([d])=>d),
+                datasets:[
+                    {label:me+' WR',data:decks.map(([,s])=>(100*s.wins/s.games).toFixed(1)),backgroundColor:colMe+'88'},
+                    {label:opp+' WR',data:decks.map(([,s])=>(100*s.oppWins/s.games).toFixed(1)),backgroundColor:colOpp+'88'}
+                ]
+            },
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{max:100,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}
         });
     }
 }

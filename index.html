@@ -51,6 +51,7 @@
         <button onclick="showView('colors')">🎨 Kolory</button>
         <button onclick="showView('power')">💪 Power Rating</button>
         <button onclick="showView('cmc')">💰 CMC Analysis</button>
+        <button onclick="showView('matchups')">⚔️ Matchups</button>
     </nav>
     <div class="container">
         <div id="view-overview" class="view active"></div>
@@ -61,6 +62,7 @@
         <div id="view-colors" class="view"></div>
         <div id="view-power" class="view"></div>
         <div id="view-cmc" class="view"></div>
+        <div id="view-matchups" class="view"></div>
     </div>
 <script>
 const RAW_GAMES = [{"date": "2024-01-19", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Rex"}, {"name": "Profit", "deck": "Zur"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-01-19", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Galea"}, {"name": "Profit", "deck": "ThaliaGitrog"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-01-19", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Edgar"}, {"name": "Profit", "deck": "Atraxa"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-02-23", "winner": "Profit", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Breya"}, {"name": "Profit", "deck": "Katilda"}, {"name": "Nori", "deck": "Millicent"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-02-23", "winner": "Profit", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Rex"}, {"name": "Profit", "deck": "Alela"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Seba", "deck": "Obuun"}]}, {"date": "2024-04-20", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Profit", "deck": "Sigarda"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-04-20", "winner": "Saka", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Seba", "deck": "Obuun"}, {"name": "Profit", "deck": "Anhelo"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-05-19", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Anikthea"}, {"name": "Profit", "deck": "Sigarda"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-05-19", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Mirko"}, {"name": "Profit", "deck": "Morophon"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-05-19", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Rex"}, {"name": "Profit", "deck": "Morophon"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-06-29", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Profit", "deck": "Atraxa"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-06-29", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Omo"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-06-29", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Profit", "deck": "Kaalia"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2024-06-29", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Profit", "deck": "Kamiz"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2024-07-26", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Mirko"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Atraxa"}]}, {"date": "2024-07-26", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Anhelo"}]}, {"date": "2024-07-26", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Zur"}]}, {"date": "2024-10-11", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Necrobloom"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Alela"}]}, {"date": "2024-10-11", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Wilhelt"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Knights"}, {"name": "Robal", "deck": "Willowdusk"}]}, {"date": "2024-10-11", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2024-11-08", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Profit", "deck": "Kykar"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-11-08", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Galea"}, {"name": "Profit", "deck": "Legends"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Seba", "deck": "Obuun"}]}, {"date": "2024-11-08", "winner": "Nori", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Necrobloom"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-11-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2024-11-30", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2024-11-30", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2024-11-30", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2024-12-20", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Hakbal"}, {"name": "Profit", "deck": "Atraxa"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-12-20", "winner": "Profit", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Hakbal"}, {"name": "Profit", "deck": "Katilda"}, {"name": "Seba", "deck": "Obuun"}]}, {"date": "2024-12-20", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Seba", "deck": "Wilhelt"}]}, {"date": "2025-01-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-01-30", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Anhelo"}]}, {"date": "2025-01-30", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kykar"}]}, {"date": "2025-01-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-03-06", "winner": "Profit", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Mendicant"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-03-06", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Mendicant"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-03-06", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Temmet"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2025-05-28", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2025-05-28", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2025-05-28", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Omo"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Sigarda"}]}, {"date": "2025-05-28", "winner": "Profit", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Legends"}]}, {"date": "2025-06-18", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Profit", "deck": "Kykar"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2025-06-18", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Profit", "deck": "ThaliaGitrog"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2025-06-18", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Profit", "deck": "Cesar"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2025-07-07", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Sigarda"}]}, {"date": "2025-07-07", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-07-23", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kamiz"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-08-22", "winner": "Saka", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Nori", "deck": "Inspirit"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Atraxa"}]}, {"date": "2025-08-22", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-08-22", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-09-07", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-09-07", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Seba", "deck": "Obuun"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-09-07", "winner": "Saka", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Seba", "deck": "Boros"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-10-03", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Profit", "deck": "Vren"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Kofaj", "deck": "Millicent"}]}, {"date": "2025-10-03", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Nori", "deck": "Inspirit"}, {"name": "Kofaj", "deck": "Millicent"}]}, {"date": "2025-10-03", "winner": "Saka", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Millicent"}]}, {"date": "2025-10-31", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Anikthea"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2025-10-31", "winner": "Kofaj", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Mirko"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Anhelo"}]}, {"date": "2025-10-31", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-11-21", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Zur"}]}, {"date": "2025-11-21", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2025-11-21", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "CptMill"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Astartes"}]}, {"date": "2025-11-21", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Alela"}]}, {"date": "2025-12-30", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Yshtola"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Profit", "deck": "Kykar"}]}, {"date": "2025-12-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "CptMill"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Seba", "deck": "Obuun"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2025-12-30", "winner": "Profit", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Hakbal"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2025-12-30", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Inspirit"}, {"name": "Profit", "deck": "Sigarda"}]}, {"date": "2026-01-14", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2026-01-14", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Sephirot"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2026-01-14", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Sephirot"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2026-01-14", "winner": "Kofaj", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Kofaj", "deck": "Krenko"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2026-03-17", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ruby"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Radtraxa"}]}, {"date": "2026-03-17", "winner": "Saka", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Ruby"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Radtraxa"}, {"name": "Kofaj", "deck": "Krenko"}]}, {"date": "2026-03-17", "winner": "Profit", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Lyse"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Bello"}, {"name": "Kofaj", "deck": "Krenko"}]}, {"date": "2026-03-17", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Lyse"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Bello"}, {"name": "Kofaj", "deck": "Krenko"}]}, {"date": "2026-04-18", "winner": "Kofaj", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Liesa"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Bello"}]}, {"date": "2026-04-18", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Sigarda"}, {"name": "Profit", "deck": "Radtraxa"}]}, {"date": "2026-05-17", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Profit", "deck": "Kykar"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2026-05-17", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ruby"}, {"name": "Profit", "deck": "Balekor"}, {"name": "Nori", "deck": "Sauron"}]}, {"date": "2026-05-17", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "ShalaiHallar"}, {"name": "Profit", "deck": "Radtraxa"}, {"name": "Nori", "deck": "Sauron"}]}, {"date": "2026-05-17", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "CptMill"}, {"name": "Profit", "deck": "Bello"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2026-05-17", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Krenko"}]}, {"date": "2026-05-17", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Lyse"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Krenko"}]}, {"date": "2026-05-17", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Krenko"}]}, {"date": "2026-06-29", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Profit", "deck": "AbbadonNew"}, {"name": "Kofaj", "deck": "Ruby"}]}, {"date": "2026-06-29", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Liesa"}, {"name": "Profit", "deck": "AbbadonNew"}, {"name": "Kofaj", "deck": "Tidus"}]}, {"date": "2026-06-29", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Profit", "deck": "Sigarda"}, {"name": "Robal", "deck": "Willowdusk"}, {"name": "Kofaj", "deck": "Tidus"}]}];
@@ -874,13 +876,156 @@ function renderCMC() {
     });
 }
 
+
+function renderMatchups() {
+    const el = document.getElementById('view-matchups');
+    
+    // Build matchup data: for each game, record which decks faced each other
+    const pairMatchups = {}; // "PlayerA:DeckA vs PlayerB:DeckB" -> {games, a_wins, b_wins}
+    const playerDeckVsPlayer = {}; // "Nori:Prosper vs Saka" -> {games, wins, opp_wins}
+    const deckBeatsSaka = {}; // deck -> {games_vs_saka, beat_saka}
+    
+    RAW_GAMES.forEach(g => {
+        const hasSaka = g.players.some(p=>p.name==='Saka');
+        g.players.forEach((p1,i) => {
+            g.players.forEach((p2,j) => {
+                if (i>=j) return;
+                // Track deck vs specific player
+                const key1 = p1.name+':'+p1.deck+' vs '+p2.name;
+                const key2 = p2.name+':'+p2.deck+' vs '+p1.name;
+                if(!playerDeckVsPlayer[key1]) playerDeckVsPlayer[key1]={games:0,wins:0,opp_wins:0,deck:p1.deck,player:p1.name,opponent:p2.name};
+                if(!playerDeckVsPlayer[key2]) playerDeckVsPlayer[key2]={games:0,wins:0,opp_wins:0,deck:p2.deck,player:p2.name,opponent:p1.name};
+                playerDeckVsPlayer[key1].games++; playerDeckVsPlayer[key2].games++;
+                if(g.winner===p1.name){playerDeckVsPlayer[key1].wins++;playerDeckVsPlayer[key2].opp_wins++;}
+                if(g.winner===p2.name){playerDeckVsPlayer[key2].wins++;playerDeckVsPlayer[key1].opp_wins++;}
+            });
+            // Saka killer tracking
+            if(hasSaka && p1.name!=='Saka') {
+                if(!deckBeatsSaka[p1.deck]) deckBeatsSaka[p1.deck]={games:0,wins:0};
+                deckBeatsSaka[p1.deck].games++;
+                if(g.winner===p1.name) deckBeatsSaka[p1.deck].wins++;
+            }
+        });
+    });
+    
+    let h = '<h2 style="margin-bottom:1.5rem;color:var(--accent)">\u2694\uFE0F Matchup Analysis</h2>';
+    h += '<p style="color:var(--text-dim);margin-bottom:1.5rem">Analiza deck-vs-player: kiedy Saka gra konkretnym deckiem, czym najlepiej odpowiedziec?</p>';
+    
+    // === NORI vs SAKA ===
+    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83e\udd4a Nori decks vs Saka (agregacja)</h3>';
+    h += '<table><tr><th>Nori Deck</th><th>Gry vs Saka</th><th>Nori W</th><th>Saka W</th><th>Nori WR</th><th>Saka WR</th><th>Wynik</th></tr>';
+    
+    const noriVsSaka = Object.values(playerDeckVsPlayer).filter(d=>d.player==='Nori'&&d.opponent==='Saka');
+    // Aggregate by deck
+    const noriDeckVsSaka = {};
+    noriVsSaka.forEach(d => {
+        if(!noriDeckVsSaka[d.deck]) noriDeckVsSaka[d.deck]={games:0,wins:0,opp_wins:0};
+        noriDeckVsSaka[d.deck].games+=d.games; noriDeckVsSaka[d.deck].wins+=d.wins; noriDeckVsSaka[d.deck].opp_wins+=d.opp_wins;
+    });
+    Object.entries(noriDeckVsSaka).sort((a,b)=>b[1].wins/b[1].games-a[1].wins/a[1].games).forEach(([deck,s])=>{
+        if(s.games<2)return;
+        const nwr=(100*s.wins/s.games).toFixed(0);
+        const swr=(100*s.opp_wins/s.games).toFixed(0);
+        const verdict=s.wins>s.opp_wins?'\u2705':s.wins===s.opp_wins?'\u2796':'\u274c';
+        h+=`<tr><td><strong>${deck}</strong></td><td>${s.games}</td><td>${s.wins}</td><td>${s.opp_wins}</td><td><span class="badge ${nwr>=30?'badge-win':'badge-loss'}">${nwr}%</span></td><td>${swr}%</td><td>${verdict}</td></tr>`;
+    });
+    h += '</table></div>';
+    
+    // === SAKA DECKS vs NORI ===
+    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83c\udfaf Saka decks: ktore Nori bije najczesciej?</h3>';
+    h += '<table><tr><th>Saka Deck</th><th>Gry vs Nori</th><th>Saka W</th><th>Nori W</th><th>Nori WR vs ten deck</th><th></th></tr>';
+    
+    const sakaVsNori = Object.values(playerDeckVsPlayer).filter(d=>d.player==='Saka'&&d.opponent==='Nori');
+    const sakaDeckVsNori = {};
+    sakaVsNori.forEach(d => {
+        if(!sakaDeckVsNori[d.deck]) sakaDeckVsNori[d.deck]={games:0,wins:0,opp_wins:0};
+        sakaDeckVsNori[d.deck].games+=d.games; sakaDeckVsNori[d.deck].wins+=d.wins; sakaDeckVsNori[d.deck].opp_wins+=d.opp_wins;
+    });
+    Object.entries(sakaDeckVsNori).filter(([,s])=>s.games>=2).sort((a,b)=>b[1].opp_wins/b[1].games-a[1].opp_wins/a[1].games).forEach(([deck,s])=>{
+        const nwr=(100*s.opp_wins/s.games).toFixed(0);
+        const bar = Math.round(100*s.opp_wins/s.games);
+        const color = bar>=40?'var(--win)':bar>=25?'#ff9800':'var(--loss)';
+        h+=`<tr><td><strong>${deck}</strong></td><td>${s.games}</td><td>${s.wins}</td><td>${s.opp_wins}</td><td><div class="wr-bar" style="width:120px"><div class="wr-bar-fill" style="width:${bar}%;background:${color}"></div></div> ${nwr}%</td><td>${nwr>=40?'\ud83c\udf1f Target!':''}</td></tr>`;
+    });
+    h += '</table></div>';
+    
+    // === COUNTER-PICK GUIDE ===
+    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83d\udee1\uFE0F Counter-Pick Guide: Saka gra X, Nori odpowiada Y</h3>';
+    h += '<p style="color:var(--text-dim);margin-bottom:1rem">Konkretne matchupy deck-vs-deck (min 2 gry, Nori wygrywat min 1x)</p>';
+    
+    // Build Nori deck vs Saka deck matrix
+    const matrix = {};
+    RAW_GAMES.forEach(g => {
+        const pmap = {};
+        g.players.forEach(p=>{pmap[p.name]=p.deck;});
+        if(pmap['Nori']&&pmap['Saka']){
+            const key=pmap['Nori']+'|'+pmap['Saka'];
+            if(!matrix[key])matrix[key]={games:0,nori:0,saka:0,noriDeck:pmap['Nori'],sakaDeck:pmap['Saka']};
+            matrix[key].games++;
+            if(g.winner==='Nori')matrix[key].nori++;
+            if(g.winner==='Saka')matrix[key].saka++;
+        }
+    });
+    
+    // Group by Saka deck
+    const bysakaDeck = {};
+    Object.values(matrix).forEach(m=>{
+        if(!bysakaDeck[m.sakaDeck])bysakaDeck[m.sakaDeck]=[];
+        bysakaDeck[m.sakaDeck].push(m);
+    });
+    
+    Object.entries(bysakaDeck).sort((a,b)=>b[1].reduce((s,m)=>s+m.games,0)-a[1].reduce((s,m)=>s+m.games,0)).forEach(([sakaDeck,matches])=>{
+        const totalGames=matches.reduce((s,m)=>s+m.games,0);
+        if(totalGames<3)return;
+        const winners=matches.filter(m=>m.nori>0).sort((a,b)=>b.nori/b.games-a.nori/a.games);
+        h+=`<div style="margin-bottom:1rem;padding:.8rem;background:rgba(255,255,255,.03);border-radius:8px">`;
+        h+=`<strong style="color:${PLAYER_COLORS['Saka']}">Saka: ${sakaDeck}</strong> <span style="color:var(--text-dim)">(${totalGames} gier vs Nori)</span><br>`;
+        if(winners.length===0){h+=`<span style="color:var(--loss)">Brak counter-picka (Nori nigdy nie wygral)</span>`;}
+        else{winners.forEach(m=>{
+            const pct=(100*m.nori/m.games).toFixed(0);
+            h+=`<span style="margin-right:1rem">\u2192 <strong style="color:${PLAYER_COLORS['Nori']}">${m.noriDeck}</strong>: ${m.nori}/${m.games} (${pct}%) ${pct>=50?'\u2705':''}</span>`;
+        });}
+        h+=`</div>`;
+    });
+    h += '</div>';
+    
+    // === SAKA KILLERS ===
+    h += '<div class="card" style="margin-bottom:1.5rem"><h3>\ud83d\udca5 Saka Killers: decki ktore go bija</h3>';
+    h += '<div class="chart-container"><canvas id="ch-matchup-killers"></canvas></div></div>';
+    
+    // === KEY INSIGHTS ===
+    h += '<div class="card"><h3>\ud83e\udde0 Wnioski matchupowe</h3>';
+    h += '<div class="fun-fact">\u2705 <strong>Prosper vs Ulalek = 100%</strong> (2/2). Saka gra 5-kolorowym, Prosper jest za szybki i zbyt value-oriented.</div>';
+    h += '<div class="fun-fact">\u2705 <strong>Prosper remisuje z Saka ogolnie (44% vs 44%)</strong> - jedyny deck ktory trzyma z nim rownowage!</div>';
+    h += '<div class="fun-fact">\u2705 <strong>Krenko vs Satya = 67%</strong> (2/3). Aggro gobliny wyprzedzaja Satya w tempie.</div>';
+    h += '<div class="fun-fact">\u274c <strong>Krenko vs Killian = 17%</strong> (1/6). Killian to hardest counter - tani, kontrolny, dominuje.</div>';
+    h += '<div class="fun-fact">\u274c <strong>Sauron vs Saka = 12%</strong>. Niezaleznie od decku Saki, Sauron przegrywa prawie zawsze.</div>';
+    h += '<div class="fun-fact">\ud83c\udf1f <strong>Saka jest najslabszy z Ulalek (40% WR vs Nori)</strong> - to jedyny deck gdzie Nori dominuje!</div>';
+    h += '<div class="fun-fact">\ud83d\udee1 <strong>Strategia: Prosper na Ulalek/Boros, Krenko na Satya. Unikaj Killiana i Lyse.</strong></div>';
+    h += '</div>';
+    
+    el.innerHTML = h;
+    
+    // Saka Killers chart
+    const killers = Object.entries(deckBeatsSaka).filter(([,s])=>s.wins>=2).sort((a,b)=>b[1].wins/b[1].games-a[1].wins/a[1].games);
+    if(document.getElementById('ch-matchup-killers')){
+        new Chart(document.getElementById('ch-matchup-killers').getContext('2d'),{
+            type:'bar',
+            data:{labels:killers.map(([d])=>d),datasets:[
+                {label:'WR vs Saka',data:killers.map(([,s])=>(100*s.wins/s.games).toFixed(1)),backgroundColor:killers.map(([,s])=>100*s.wins/s.games>=30?'#4caf5088':'#ff980088')},
+            ]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{max:100,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}
+        });
+    }
+}
+
 // Navigation update
 function showView(name){
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
     document.getElementById('view-'+name).classList.add('active');
     event.target.classList.add('active');
-    const r={overview:renderOverview,players:renderPlayers,decks:renderDecks,h2h:renderH2H,funfacts:renderFunFacts,colors:renderColors,power:renderPower,cmc:renderCMC};
+    const r={overview:renderOverview,players:renderPlayers,decks:renderDecks,h2h:renderH2H,funfacts:renderFunFacts,colors:renderColors,power:renderPower,cmc:renderCMC,matchups:renderMatchups};
     if(!window['_'+name+'Done']){r[name]();window['_'+name+'Done']=true;}
 }
 

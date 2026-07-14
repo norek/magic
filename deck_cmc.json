@@ -1,0 +1,250 @@
+{
+  "Abaddon": {
+    "cmc": 5.0,
+    "name": "Abaddon the Despoiler"
+  },
+  "AbbadonNew": {
+    "cmc": 5.0,
+    "name": "Abaddon the Despoiler"
+  },
+  "Alela": {
+    "cmc": 4.0,
+    "name": "Alela, Artful Provocateur"
+  },
+  "Anhelo": {
+    "cmc": 3.0,
+    "name": "Anhelo, the Painter"
+  },
+  "Anikthea": {
+    "cmc": 5.0,
+    "name": "Anikthea, Hand of Erebos"
+  },
+  "Anowon": {
+    "cmc": 4.0,
+    "name": "Anowon, the Ruin Thief"
+  },
+  "Astartes": {
+    "cmc": 5.0,
+    "name": "Marneus Calgar"
+  },
+  "Atraxa": {
+    "cmc": 4.0,
+    "name": "Atraxa, Praetors' Voice"
+  },
+  "Bello": {
+    "cmc": 3.0,
+    "name": "Bello, Bard of the Brambles"
+  },
+  "Breya": {
+    "cmc": 4.0,
+    "name": "Breya, Etherium Shaper"
+  },
+  "CptMill": {
+    "cmc": 3.0,
+    "name": "Bruvac the Grandiloquent"
+  },
+  "Edgar": {
+    "cmc": 6.0,
+    "name": "Edgar Markov"
+  },
+  "Galea": {
+    "cmc": 4.0,
+    "name": "Galea, Kindler of Hope"
+  },
+  "Gishath": {
+    "cmc": 8.0,
+    "name": "Gishath, Sun's Avatar"
+  },
+  "Hakbal": {
+    "cmc": 4.0,
+    "name": "Hakbal of the Surging Soul"
+  },
+  "Inspirit": {
+    "cmc": 3.0,
+    "name": "Inspirit"
+  },
+  "Jirina": {
+    "cmc": 4.0,
+    "name": "Jirina Kudro"
+  },
+  "Kaalia": {
+    "cmc": 4.0,
+    "name": "Kaalia of the Vast"
+  },
+  "Kamiz": {
+    "cmc": 4.0,
+    "name": "Kamiz, Obscura Oculus"
+  },
+  "Kathril": {
+    "cmc": 5.0,
+    "name": "Kathril, Aspect Warper"
+  },
+  "Katilda": {
+    "cmc": 4,
+    "name": "Katilda (manual)"
+  },
+  "Killian": {
+    "cmc": 4,
+    "name": "Killian (manual)"
+  },
+  "Knights": {
+    "cmc": 4,
+    "name": "Knights (manual)"
+  },
+  "Krenko": {
+    "cmc": 4,
+    "name": "Krenko (manual)"
+  },
+  "Kykar": {
+    "cmc": 4,
+    "name": "Kykar (manual)"
+  },
+  "Lathril": {
+    "cmc": 4,
+    "name": "Lathril (manual)"
+  },
+  "Legends": {
+    "cmc": 4,
+    "name": "Legends (manual)"
+  },
+  "Liesa": {
+    "cmc": 4,
+    "name": "Liesa (manual)"
+  },
+  "Millicent": {
+    "cmc": 4,
+    "name": "Millicent (manual)"
+  },
+  "Mirko": {
+    "cmc": 3.0,
+    "name": "Mirko, Obsessive Theorist"
+  },
+  "Morophon": {
+    "cmc": 4,
+    "name": "Morophon (manual)"
+  },
+  "Necrobloom": {
+    "cmc": 4,
+    "name": "Necrobloom (manual)"
+  },
+  "Obuun": {
+    "cmc": 4,
+    "name": "Obuun (manual)"
+  },
+  "Omo": {
+    "cmc": 4,
+    "name": "Omo (manual)"
+  },
+  "Prosper": {
+    "cmc": 4,
+    "name": "Prosper (manual)"
+  },
+  "Radtraxa": {
+    "cmc": 4,
+    "name": "Radtraxa (manual)"
+  },
+  "Ranar": {
+    "cmc": 4,
+    "name": "Ranar (manual)"
+  },
+  "Rex": {
+    "cmc": 4,
+    "name": "Rex (manual)"
+  },
+  "Ruby": {
+    "cmc": 4,
+    "name": "Ruby (manual)"
+  },
+  "Satya": {
+    "cmc": 4,
+    "name": "Satya (manual)"
+  },
+  "Sauron": {
+    "cmc": 4,
+    "name": "Sauron (manual)"
+  },
+  "Sefris": {
+    "cmc": 4,
+    "name": "Sefris (manual)"
+  },
+  "Sephirot": {
+    "cmc": 4,
+    "name": "Sephirot (manual)"
+  },
+  "ShalaiHallar": {
+    "cmc": 4,
+    "name": "ShalaiHallar (manual)"
+  },
+  "Sigarda": {
+    "cmc": 4,
+    "name": "Sigarda (manual)"
+  },
+  "Temmet": {
+    "cmc": 4,
+    "name": "Temmet (manual)"
+  },
+  "ThaliaGitrog": {
+    "cmc": 4,
+    "name": "ThaliaGitrog (manual)"
+  },
+  "Ulalek": {
+    "cmc": 4,
+    "name": "Ulalek (manual)"
+  },
+  "UrDragon": {
+    "cmc": 4,
+    "name": "UrDragon (manual)"
+  },
+  "Valgavoth": {
+    "cmc": 4,
+    "name": "Valgavoth (manual)"
+  },
+  "Vren": {
+    "cmc": 4,
+    "name": "Vren (manual)"
+  },
+  "Wilhelt": {
+    "cmc": 4,
+    "name": "Wilhelt (manual)"
+  },
+  "Willowdusk": {
+    "cmc": 4,
+    "name": "Willowdusk (manual)"
+  },
+  "Zur": {
+    "cmc": 4,
+    "name": "Zur (manual)"
+  },
+  "Balekor": {
+    "cmc": 5,
+    "name": "Balekor"
+  },
+  "Boros": {
+    "cmc": 4,
+    "name": "Boros"
+  },
+  "Cesar": {
+    "cmc": 4,
+    "name": "Cesar"
+  },
+  "Hearthhull": {
+    "cmc": 4,
+    "name": "Hearthhull"
+  },
+  "Lyse": {
+    "cmc": 3,
+    "name": "Lyse"
+  },
+  "Mendicant": {
+    "cmc": 2,
+    "name": "Mendicant"
+  },
+  "Tidus": {
+    "cmc": 4,
+    "name": "Tidus"
+  },
+  "Yshtola": {
+    "cmc": 3,
+    "name": "Yshtola"
+  }
+}

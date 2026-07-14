@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Stats Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root{--bg:#1a1a2e;--surface:#16213e;--card:#0f3460;--accent:#e94560;--accent2:#533483;--text:#eaeaea;--text-dim:#a0a0b0;--win:#4caf50;--loss:#f44336}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        .header{background:linear-gradient(135deg,var(--surface),var(--accent2));padding:2rem;text-align:center;border-bottom:3px solid var(--accent)}
+        .header h1{font-size:2.5rem;margin-bottom:.5rem}.header p{color:var(--text-dim);font-size:1.1rem}
+        nav{background:var(--surface);padding:1rem;display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.1)}
+        nav button{background:var(--card);color:var(--text);border:1px solid rgba(255,255,255,.1);padding:.6rem 1.2rem;border-radius:8px;cursor:pointer;font-size:.9rem;transition:all .2s}
+        nav button:hover{background:var(--accent2)}nav button.active{background:var(--accent);border-color:var(--accent)}
+        .container{max-width:1400px;margin:0 auto;padding:2rem}.view{display:none}.view.active{display:block}
+        .grid{display:grid;gap:1.5rem}.grid-2{grid-template-columns:repeat(auto-fit,minmax(400px,1fr))}.grid-3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.grid-4{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+        .card{background:var(--card);border-radius:12px;padding:1.5rem;border:1px solid rgba(255,255,255,.05)}
+        .card h3{margin-bottom:1rem;color:var(--accent);font-size:1.1rem}
+        .stat-big{font-size:2.5rem;font-weight:bold}.stat-label{color:var(--text-dim);font-size:.85rem;margin-top:.3rem}
+        .stat-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.05)}.stat-row:last-child{border-bottom:none}
+        .badge{display:inline-block;padding:.2rem .6rem;border-radius:4px;font-size:.8rem;font-weight:bold}
+        .badge-win{background:rgba(76,175,80,.2);color:var(--win)}.badge-loss{background:rgba(244,67,54,.2);color:var(--loss)}.badge-neutral{background:rgba(255,255,255,.1);color:var(--text-dim)}
+        .wr-bar{height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;margin-top:4px}.wr-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+        table{width:100%;border-collapse:collapse}th,td{padding:.7rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.05)}th{color:var(--accent);font-size:.85rem;text-transform:uppercase}
+        .chart-container{position:relative;height:300px}
+        .player-selector{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .player-btn{padding:.5rem 1rem;border-radius:8px;border:2px solid rgba(255,255,255,.2);background:transparent;color:var(--text);cursor:pointer;font-size:.9rem;transition:all .2s}
+        .player-btn:hover{border-color:var(--accent)}.player-btn.active{background:var(--accent);border-color:var(--accent)}
+        .deck-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+        .deck-card{cursor:pointer;transition:transform .2s,box-shadow .2s}.deck-card:hover{transform:translateY(-3px);box-shadow:0 8px 25px rgba(0,0,0,.3)}
+        .tl{display:inline-block;width:18px;height:18px;margin:1px;border-radius:3px;font-size:9px;text-align:center;line-height:18px;font-weight:bold}
+        .tl-W{background:var(--win);color:#fff}.tl-L{background:var(--loss);color:#fff}
+        .fun-fact{padding:1rem;background:rgba(233,69,96,.1);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;margin-bottom:1rem;font-size:.95rem}
+        .h2h-table td,.h2h-table th{text-align:center;padding:.6rem}.h2h-table td.self{background:rgba(255,255,255,.03)}
+        @media(max-width:768px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}.header h1{font-size:1.8rem}nav{gap:.3rem}nav button{padding:.4rem .8rem;font-size:.8rem}}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🃏 MTG Commander Stats</h1>
+        <p>Styczeń 2024 – Czerwiec 2026 • 91 gier • 27 sesji • 6 graczy</p>
+    </div>
+    <nav>
+        <button class="active" onclick="showView('overview')">📊 Overview</button>
+        <button onclick="showView('players')">👤 Gracze</button>
+        <button onclick="showView('decks')">🃏 Decki</button>
+        <button onclick="showView('h2h')">🆚 Head-to-Head</button>
+        <button onclick="showView('funfacts')">⭐ Ciekawostki</button>
+        <button onclick="showView('colors')">🎨 Kolory</button>
+        <button onclick="showView('power')">💪 Power Rating</button>
+        <button onclick="showView('cmc')">💰 CMC Analysis</button>
+    </nav>
+    <div class="container">
+        <div id="view-overview" class="view active"></div>
+        <div id="view-players" class="view"></div>
+        <div id="view-decks" class="view"></div>
+        <div id="view-h2h" class="view"></div>
+        <div id="view-funfacts" class="view"></div>
+        <div id="view-colors" class="view"></div>
+        <div id="view-power" class="view"></div>
+        <div id="view-cmc" class="view"></div>
+    </div>
+<script>
+const RAW_GAMES = [{"date": "2024-01-19", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Rex"}, {"name": "Profit", "deck": "Zur"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-01-19", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Galea"}, {"name": "Profit", "deck": "ThaliaGitrog"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-01-19", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Edgar"}, {"name": "Profit", "deck": "Atraxa"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-02-23", "winner": "Profit", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Breya"}, {"name": "Profit", "deck": "Katilda"}, {"name": "Nori", "deck": "Millicent"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-02-23", "winner": "Profit", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Rex"}, {"name": "Profit", "deck": "Alela"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Seba", "deck": "Obuun"}]}, {"date": "2024-04-20", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Profit", "deck": "Sigarda"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-04-20", "winner": "Saka", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Seba", "deck": "Obuun"}, {"name": "Profit", "deck": "Anhelo"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-05-19", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Anikthea"}, {"name": "Profit", "deck": "Sigarda"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-05-19", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Mirko"}, {"name": "Profit", "deck": "Morophon"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-05-19", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Rex"}, {"name": "Profit", "deck": "Morophon"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-06-29", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Profit", "deck": "Atraxa"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2024-06-29", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Omo"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Nori", "deck": "Millicent"}]}, {"date": "2024-06-29", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Profit", "deck": "Kaalia"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2024-06-29", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Profit", "deck": "Kamiz"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2024-07-26", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Mirko"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Atraxa"}]}, {"date": "2024-07-26", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Anhelo"}]}, {"date": "2024-07-26", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Zur"}]}, {"date": "2024-10-11", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Necrobloom"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Alela"}]}, {"date": "2024-10-11", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Wilhelt"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Knights"}, {"name": "Robal", "deck": "Willowdusk"}]}, {"date": "2024-10-11", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2024-11-08", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Profit", "deck": "Kykar"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-11-08", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Galea"}, {"name": "Profit", "deck": "Legends"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Seba", "deck": "Obuun"}]}, {"date": "2024-11-08", "winner": "Nori", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Necrobloom"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-11-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2024-11-30", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2024-11-30", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2024-11-30", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2024-12-20", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Hakbal"}, {"name": "Profit", "deck": "Atraxa"}, {"name": "Seba", "deck": "Anowon"}]}, {"date": "2024-12-20", "winner": "Profit", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Hakbal"}, {"name": "Profit", "deck": "Katilda"}, {"name": "Seba", "deck": "Obuun"}]}, {"date": "2024-12-20", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Seba", "deck": "Wilhelt"}]}, {"date": "2025-01-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-01-30", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Anhelo"}]}, {"date": "2025-01-30", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kykar"}]}, {"date": "2025-01-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-03-06", "winner": "Profit", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Mendicant"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-03-06", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Mendicant"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-03-06", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Temmet"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2025-05-28", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2025-05-28", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2025-05-28", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Omo"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Sigarda"}]}, {"date": "2025-05-28", "winner": "Profit", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Legends"}]}, {"date": "2025-06-18", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Profit", "deck": "Kykar"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2025-06-18", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ulalek"}, {"name": "Profit", "deck": "ThaliaGitrog"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2025-06-18", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Profit", "deck": "Cesar"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2025-07-07", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Sigarda"}]}, {"date": "2025-07-07", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-07-23", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Kamiz"}]}, {"date": "2025-07-23", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-08-22", "winner": "Saka", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Nori", "deck": "Inspirit"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Atraxa"}]}, {"date": "2025-08-22", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-08-22", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-09-07", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2025-09-07", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Seba", "deck": "Obuun"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-09-07", "winner": "Saka", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Satya"}, {"name": "Seba", "deck": "Boros"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Vren"}]}, {"date": "2025-10-03", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Ranar"}, {"name": "Profit", "deck": "Vren"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Kofaj", "deck": "Millicent"}]}, {"date": "2025-10-03", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Profit", "deck": "Jirina"}, {"name": "Nori", "deck": "Inspirit"}, {"name": "Kofaj", "deck": "Millicent"}]}, {"date": "2025-10-03", "winner": "Saka", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Millicent"}]}, {"date": "2025-10-31", "winner": "Profit", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Anikthea"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Abaddon"}]}, {"date": "2025-10-31", "winner": "Kofaj", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Mirko"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Anhelo"}]}, {"date": "2025-10-31", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kathril"}]}, {"date": "2025-11-21", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "UrDragon"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Zur"}]}, {"date": "2025-11-21", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Lathril"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Kaalia"}]}, {"date": "2025-11-21", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "CptMill"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Astartes"}]}, {"date": "2025-11-21", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Alela"}]}, {"date": "2025-12-30", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Yshtola"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Profit", "deck": "Kykar"}]}, {"date": "2025-12-30", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "CptMill"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Seba", "deck": "Obuun"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2025-12-30", "winner": "Profit", "firstPlayer": "Seba", "players": [{"name": "Saka", "deck": "Hakbal"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Seba", "deck": "Anowon"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2025-12-30", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Inspirit"}, {"name": "Profit", "deck": "Sigarda"}]}, {"date": "2026-01-14", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Nori", "deck": "Krenko"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2026-01-14", "winner": "Nori", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Sephirot"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2026-01-14", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Sephirot"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Balekor"}]}, {"date": "2026-01-14", "winner": "Kofaj", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Boros"}, {"name": "Kofaj", "deck": "Krenko"}, {"name": "Nori", "deck": "Gishath"}, {"name": "Profit", "deck": "Jirina"}]}, {"date": "2026-03-17", "winner": "Nori", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ruby"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Profit", "deck": "Radtraxa"}]}, {"date": "2026-03-17", "winner": "Saka", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Ruby"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Radtraxa"}, {"name": "Kofaj", "deck": "Krenko"}]}, {"date": "2026-03-17", "winner": "Profit", "firstPlayer": "Kofaj", "players": [{"name": "Saka", "deck": "Lyse"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Bello"}, {"name": "Kofaj", "deck": "Krenko"}]}, {"date": "2026-03-17", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Lyse"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Profit", "deck": "Bello"}, {"name": "Kofaj", "deck": "Krenko"}]}, {"date": "2026-04-18", "winner": "Kofaj", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Liesa"}, {"name": "Nori", "deck": "Prosper"}, {"name": "Kofaj", "deck": "Gishath"}, {"name": "Profit", "deck": "Bello"}]}, {"date": "2026-04-18", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Sefris"}, {"name": "Nori", "deck": "Sauron"}, {"name": "Kofaj", "deck": "Sigarda"}, {"name": "Profit", "deck": "Radtraxa"}]}, {"date": "2026-05-17", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Profit", "deck": "Kykar"}, {"name": "Nori", "deck": "Prosper"}]}, {"date": "2026-05-17", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Ruby"}, {"name": "Profit", "deck": "Balekor"}, {"name": "Nori", "deck": "Sauron"}]}, {"date": "2026-05-17", "winner": "Saka", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "ShalaiHallar"}, {"name": "Profit", "deck": "Radtraxa"}, {"name": "Nori", "deck": "Sauron"}]}, {"date": "2026-05-17", "winner": "Profit", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "CptMill"}, {"name": "Profit", "deck": "Bello"}, {"name": "Nori", "deck": "Gishath"}]}, {"date": "2026-05-17", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Krenko"}]}, {"date": "2026-05-17", "winner": "Saka", "firstPlayer": "Nori", "players": [{"name": "Saka", "deck": "Lyse"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Krenko"}]}, {"date": "2026-05-17", "winner": "Nori", "firstPlayer": "Profit", "players": [{"name": "Saka", "deck": "Killian"}, {"name": "Profit", "deck": "Kathril"}, {"name": "Nori", "deck": "Krenko"}]}, {"date": "2026-06-29", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Valgavoth"}, {"name": "Profit", "deck": "AbbadonNew"}, {"name": "Kofaj", "deck": "Ruby"}]}, {"date": "2026-06-29", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Liesa"}, {"name": "Profit", "deck": "AbbadonNew"}, {"name": "Kofaj", "deck": "Tidus"}]}, {"date": "2026-06-29", "winner": "Saka", "firstPlayer": "Saka", "players": [{"name": "Saka", "deck": "Hearthhull"}, {"name": "Profit", "deck": "Sigarda"}, {"name": "Robal", "deck": "Willowdusk"}, {"name": "Kofaj", "deck": "Tidus"}]}];
+
+const PLAYER_COLORS = {Saka:'#e94560',Profit:'#9b59b6',Nori:'#4caf50',Kofaj:'#ff9800',Seba:'#2196f3',Robal:'#9e9e9e'};
+
+function processData(){
+    const players={},decks={},sessions={};
+    RAW_GAMES.forEach((game,idx)=>{
+        const date=game.date;
+        if(!sessions[date])sessions[date]=[];
+        sessions[date].push(game);
+        game.players.forEach(p=>{
+            if(!players[p.name])players[p.name]={games:[],wins:0,decks:{},sessions:{}};
+            const pg=players[p.name];
+            const won=game.winner===p.name;
+            const wentFirst=game.firstPlayer===p.name;
+            pg.games.push({date,deck:p.deck,won,wentFirst,numPlayers:game.players.length,idx});
+            if(won)pg.wins++;
+            if(!pg.decks[p.deck])pg.decks[p.deck]={wins:0,games:0,results:[],dates:[]};
+            pg.decks[p.deck].games++;pg.decks[p.deck].dates.push(date);
+            pg.decks[p.deck].results.push(won?'W':'L');
+            if(won)pg.decks[p.deck].wins++;
+            if(!pg.sessions[date])pg.sessions[date]=[];
+            pg.sessions[date].push({won,deck:p.deck});
+        });
+    });
+    return{players,sessions};
+}
+const DATA=processData();
+const SESSIONS_SORTED=Object.keys(DATA.sessions).sort();
+const MAIN_PLAYERS=Object.keys(DATA.players).filter(p=>DATA.players[p].games.length>=10).sort((a,b)=>DATA.players[b].wins/DATA.players[b].games.length-DATA.players[a].wins/DATA.players[a].games.length);
+const ALL_PLAYERS=Object.keys(DATA.players).filter(p=>DATA.players[p].games.length>=3).sort((a,b)=>DATA.players[b].wins/DATA.players[b].games.length-DATA.players[a].wins/DATA.players[a].games.length);
+
+// showView moved to bottom
+
+function renderOverview(){
+    const el=document.getElementById('view-overview');
+    const allDecks=new Set();RAW_GAMES.forEach(g=>g.players.forEach(p=>allDecks.add(p.deck)));
+    let h='<div class="grid grid-4" style="margin-bottom:2rem">';
+    h+=`<div class="card"><div class="stat-big">${RAW_GAMES.length}</div><div class="stat-label">Rozegranych gier</div></div>`;
+    h+=`<div class="card"><div class="stat-big">${SESSIONS_SORTED.length}</div><div class="stat-label">Sesji grania</div></div>`;
+    h+=`<div class="card"><div class="stat-big">${Object.keys(DATA.players).length}</div><div class="stat-label">Graczy</div></div>`;
+    h+=`<div class="card"><div class="stat-big">${allDecks.size}</div><div class="stat-label">Unikalnych decków</div></div>`;
+    h+='</div><div class="grid grid-2">';
+    // Ranking
+    h+='<div class="card"><h3>🏆 Ranking graczy</h3>';
+    ALL_PLAYERS.forEach((p,i)=>{
+        const pg=DATA.players[p];const wr=(100*pg.wins/pg.games.length).toFixed(1);
+        const medal=['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'][i]||'';
+        h+=`<div class="stat-row"><span>${medal} <strong>${p}</strong></span><span class="badge ${wr>=30?'badge-win':'badge-loss'}">${wr}% (${pg.wins}/${pg.games.length})</span></div>`;
+        h+=`<div class="wr-bar"><div class="wr-bar-fill" style="width:${wr}%;background:${PLAYER_COLORS[p]||'#666'}"></div></div>`;
+    });
+    h+='</div>';
+    h+='<div class="card"><h3>📈 Winrate w czasie (skumulowany)</h3><div class="chart-container"><canvas id="ch-ov-wr"></canvas></div></div>';
+    h+='</div><div class="grid grid-2" style="margin-top:1.5rem">';
+    h+='<div class="card"><h3>🥧 Podział zwycięstw</h3><div class="chart-container"><canvas id="ch-ov-pie"></canvas></div></div>';
+    h+='<div class="card"><h3>🎯 First Player Advantage</h3><div class="chart-container"><canvas id="ch-ov-fp"></canvas></div></div>';
+    h+='</div><div class="grid grid-2" style="margin-top:1.5rem">';
+    h+='<div class="card"><h3>📅 Gry per sesja</h3><div class="chart-container"><canvas id="ch-ov-gps"></canvas></div></div>';
+    h+='<div class="card"><h3>👥 WR: 3 gracze vs 4 gracze</h3><div class="chart-container"><canvas id="ch-ov-34"></canvas></div></div>';
+    h+='</div>';
+    el.innerHTML=h;
+    // Charts
+    const wrCtx=document.getElementById('ch-ov-wr').getContext('2d');
+    const ds=MAIN_PLAYERS.map(pn=>{
+        const pg=DATA.players[pn];let cw=0,cg=0;const pts=[];
+        SESSIONS_SORTED.forEach(d=>{if(pg.sessions[d]){pg.sessions[d].forEach(g=>{cg++;if(g.won)cw++;});pts.push({x:d.slice(5),y:+(100*cw/cg).toFixed(1)});}});
+        return{label:pn,data:pts.map(p=>p.y),borderColor:PLAYER_COLORS[pn],backgroundColor:PLAYER_COLORS[pn]+'22',tension:.3,fill:false,pointRadius:3};
+    });
+    const labels=[];SESSIONS_SORTED.forEach(d=>labels.push(d.slice(5)));
+    // Need aligned labels - use max length
+    const maxLen=Math.max(...ds.map(d=>d.data.length));
+    const alignedLabels=SESSIONS_SORTED.map(d=>d.slice(5));
+    // Rebuild with aligned data
+    const ds2=MAIN_PLAYERS.map(pn=>{
+        const pg=DATA.players[pn];let cw=0,cg=0;const pts=[];
+        SESSIONS_SORTED.forEach(d=>{if(pg.sessions[d]){pg.sessions[d].forEach(g=>{cg++;if(g.won)cw++;});pts.push(+(100*cw/cg).toFixed(1));}else pts.push(null);});
+        return{label:pn,data:pts,borderColor:PLAYER_COLORS[pn],tension:.3,fill:false,pointRadius:3,spanGaps:true};
+    });
+    new Chart(wrCtx,{type:'line',data:{labels:alignedLabels,datasets:ds2},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0',maxRotation:45,maxTicksLimit:15}},y:{min:0,max:70,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+    // Pie
+    new Chart(document.getElementById('ch-ov-pie').getContext('2d'),{type:'doughnut',data:{labels:ALL_PLAYERS,datasets:[{data:ALL_PLAYERS.map(p=>DATA.players[p].wins),backgroundColor:ALL_PLAYERS.map(p=>PLAYER_COLORS[p]||'#666')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}}}});
+    // FP
+    const fpD=MAIN_PLAYERS.map(p=>{const g=DATA.players[p].games;const fp=g.filter(x=>x.wentFirst);const nf=g.filter(x=>!x.wentFirst);return{n:p,fp:fp.length?+(100*fp.filter(x=>x.won).length/fp.length).toFixed(1):0,nf:nf.length?+(100*nf.filter(x=>x.won).length/nf.length).toFixed(1):0};});
+    new Chart(document.getElementById('ch-ov-fp').getContext('2d'),{type:'bar',data:{labels:fpD.map(d=>d.n),datasets:[{label:'First Player',data:fpD.map(d=>d.fp),backgroundColor:'#4caf5088'},{label:'Nie first',data:fpD.map(d=>d.nf),backgroundColor:'#f4433688'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+    // GPS
+    new Chart(document.getElementById('ch-ov-gps').getContext('2d'),{type:'bar',data:{labels:SESSIONS_SORTED.map(d=>d.slice(5)),datasets:[{label:'Gry',data:SESSIONS_SORTED.map(d=>DATA.sessions[d].length),backgroundColor:'#e9456066',borderColor:'#e94560',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#a0a0b0',maxRotation:45,maxTicksLimit:15}},y:{ticks:{color:'#a0a0b0'}}}}});
+    // 3v4
+    const pcD=MAIN_PLAYERS.map(p=>{const g=DATA.players[p].games;const g3=g.filter(x=>x.numPlayers===3);const g4=g.filter(x=>x.numPlayers===4);return{n:p,wr3:g3.length?+(100*g3.filter(x=>x.won).length/g3.length).toFixed(1):0,wr4:g4.length?+(100*g4.filter(x=>x.won).length/g4.length).toFixed(1):0};});
+    new Chart(document.getElementById('ch-ov-34').getContext('2d'),{type:'bar',data:{labels:pcD.map(d=>d.n),datasets:[{label:'3 graczy',data:pcD.map(d=>d.wr3),backgroundColor:'#2196f388'},{label:'4 graczy',data:pcD.map(d=>d.wr4),backgroundColor:'#ff980088'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+}
+
+function renderPlayers(){
+    const el=document.getElementById('view-players');
+    el.innerHTML='<div class="player-selector" id="psel"></div><div id="pdetail"></div>';
+    const sel=document.getElementById('psel');
+    ALL_PLAYERS.forEach((p,i)=>{
+        const btn=document.createElement('button');btn.className='player-btn'+(i===0?' active':'');
+        btn.textContent=p;btn.style.borderColor=PLAYER_COLORS[p]||'#666';
+        btn.onclick=()=>{document.querySelectorAll('.player-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderPD(p);};
+        sel.appendChild(btn);
+    });
+    renderPD(ALL_PLAYERS[0]);
+}
+
+function renderPD(name){
+    const el=document.getElementById('pdetail');
+    const p=DATA.players[name];const t=p.games.length;const wr=(100*p.wins/t).toFixed(1);
+    const exp=(p.games.reduce((s,g)=>s+100/g.numPlayers,0)/t).toFixed(1);
+    const col=PLAYER_COLORS[name]||'#666';
+    const nDecks=Object.keys(p.decks).length;const nSess=Object.keys(p.sessions).length;
+    let h=`<div class="card" style="margin-bottom:1.5rem;border-left:4px solid ${col}"><div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">`;
+    h+=`<div><div class="stat-big" style="color:${col}">${wr}%</div><div class="stat-label">Winrate (${p.wins}/${t})</div></div>`;
+    h+=`<div><div class="stat-big">${nSess}</div><div class="stat-label">Sesji</div></div>`;
+    h+=`<div><div class="stat-big">${nDecks}</div><div class="stat-label">Decków</div></div>`;
+    h+=`<div><div class="stat-big">${exp}%</div><div class="stat-label">Expected WR</div></div>`;
+    h+='</div></div>';
+    h+='<div class="grid grid-2">';
+    h+=`<div class="card"><h3>📈 Winrate w czasie</h3><div class="chart-container"><canvas id="ch-p-wr"></canvas></div></div>`;
+    h+=`<div class="card"><h3>🃏 Winrate per deck (min 2 gry)</h3><div class="chart-container"><canvas id="ch-p-dk"></canvas></div></div>`;
+    h+='</div>';
+    // Deck table
+    h+='<div class="card" style="margin-top:1.5rem"><h3>📋 Wszystkie decki</h3><table><tr><th>Deck</th><th>Gry</th><th>W</th><th>WR</th><th>Timeline</th><th>Trend</th></tr>';
+    Object.entries(p.decks).sort((a,b)=>b[1].games-a[1].games).forEach(([dk,s])=>{
+        const dwr=(100*s.wins/s.games).toFixed(0);
+        const tl=s.results.map(r=>`<span class="tl tl-${r}">${r}</span>`).join('');
+        let trend='➡️';
+        if(s.games>=4){const m=Math.floor(s.games/2);const f=s.results.slice(0,m).filter(r=>r==='W').length/m;const sh=s.results.slice(m).filter(r=>r==='W').length/(s.games-m);if(sh-f>.1)trend='📈';else if(f-sh>.1)trend='📉';}
+        h+=`<tr><td><strong>${dk}</strong></td><td>${s.games}</td><td>${s.wins}</td><td><span class="badge ${dwr>=30?'badge-win':'badge-loss'}">${dwr}%</span></td><td>${tl}</td><td>${trend}</td></tr>`;
+    });
+    h+='</table></div>';
+    // Session table
+    h+='<div class="card" style="margin-top:1.5rem"><h3>📅 Historia sesji</h3><table><tr><th>Data</th><th>Gry</th><th>W</th><th>WR</th><th>Wyniki</th><th>Decki</th></tr>';
+    Object.keys(p.sessions).sort().forEach(d=>{
+        const sess=p.sessions[d];const sw=sess.filter(g=>g.won).length;const swr=(100*sw/sess.length).toFixed(0);
+        const res=sess.map(g=>`<span class="tl tl-${g.won?'W':'L'}">${g.won?'W':'L'}</span>`).join('');
+        const dks=[...new Set(sess.map(g=>g.deck))].join(', ');
+        h+=`<tr><td>${d}</td><td>${sess.length}</td><td>${sw}</td><td><span class="badge ${swr>=33?'badge-win':'badge-loss'}">${swr}%</span></td><td>${res}</td><td style="font-size:.85rem">${dks}</td></tr>`;
+    });
+    h+='</table></div>';
+    el.innerHTML=h;
+    // Charts
+    const wrCtx=document.getElementById('ch-p-wr').getContext('2d');
+    let cw=0,cg=0;const pts=[],lbls=[];
+    SESSIONS_SORTED.forEach(d=>{if(p.sessions[d]){p.sessions[d].forEach(g=>{cg++;if(g.won)cw++;});pts.push(+(100*cw/cg).toFixed(1));lbls.push(d.slice(5));}});
+    new Chart(wrCtx,{type:'line',data:{labels:lbls,datasets:[{label:'Winrate',data:pts,borderColor:col,backgroundColor:col+'33',fill:true,tension:.3,pointRadius:4},{label:'Expected',data:pts.map(()=>+exp),borderColor:'#fff4',borderDash:[5,5],pointRadius:0,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0',maxRotation:45}},y:{min:0,max:Math.max(70,...pts)+5,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+    // Deck bar
+    const dkCtx=document.getElementById('ch-p-dk').getContext('2d');
+    const sd=Object.entries(p.decks).filter(([,s])=>s.games>=2).sort((a,b)=>(b[1].wins/b[1].games)-(a[1].wins/a[1].games));
+    new Chart(dkCtx,{type:'bar',data:{labels:sd.map(([d])=>d),datasets:[{label:'WR%',data:sd.map(([,s])=>+(100*s.wins/s.games).toFixed(1)),backgroundColor:sd.map(([,s])=>100*s.wins/s.games>=30?'#4caf5088':'#f4433688')}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{max:100,ticks:{color:'#a0a0b0',callback:v=>v+'%'}},y:{ticks:{color:'#a0a0b0'}}}}});
+}
+
+function renderDecks(){
+    const el=document.getElementById('view-decks');
+    // Collect all decks across all players
+    const allDecks={};
+    Object.entries(DATA.players).forEach(([pn,pd])=>{
+        Object.entries(pd.decks).forEach(([dk,s])=>{
+            if(!allDecks[dk])allDecks[dk]={totalGames:0,totalWins:0,players:{}};
+            allDecks[dk].totalGames+=s.games;allDecks[dk].totalWins+=s.wins;
+            allDecks[dk].players[pn]={wins:s.wins,games:s.games,results:s.results,dates:s.dates};
+        });
+    });
+    // Sort by total games
+    const sorted=Object.entries(allDecks).sort((a,b)=>b[1].totalGames-a[1].totalGames);
+    
+    let h='<div class="player-selector" id="dsel"></div><div id="ddetail"></div>';
+    el.innerHTML=h;
+    const sel=document.getElementById('dsel');
+    // Top decks as buttons
+    sorted.slice(0,20).forEach(([dk],i)=>{
+        const btn=document.createElement('button');btn.className='player-btn'+(i===0?' active':'');
+        btn.textContent=dk;
+        btn.onclick=()=>{document.querySelectorAll('#dsel .player-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderDD(dk,allDecks[dk]);};
+        sel.appendChild(btn);
+    });
+    renderDD(sorted[0][0],sorted[0][1]);
+}
+
+function renderDD(name,deck){
+    const el=document.getElementById('ddetail');
+    const wr=(100*deck.totalWins/deck.totalGames).toFixed(1);
+    const players=Object.entries(deck.players).sort((a,b)=>b[1].games-a[1].games);
+    
+    let h=`<div class="card" style="margin-bottom:1.5rem;border-left:4px solid var(--accent)"><div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">`;
+    h+=`<div><div class="stat-big" style="color:var(--accent)">${name}</div><div class="stat-label">Deck</div></div>`;
+    h+=`<div><div class="stat-big">${deck.totalGames}</div><div class="stat-label">Gier łącznie</div></div>`;
+    h+=`<div><div class="stat-big">${wr}%</div><div class="stat-label">Ogólny WR</div></div>`;
+    h+=`<div><div class="stat-big">${players.length}</div><div class="stat-label">Graczy</div></div>`;
+    h+='</div></div>';
+    
+    h+='<div class="grid grid-2">';
+    h+=`<div class="card"><h3>👤 Gracze używający ${name}</h3>`;
+    h+='<table><tr><th>Gracz</th><th>Gry</th><th>W</th><th>WR</th><th>Timeline</th><th>Trend</th></tr>';
+    players.forEach(([pn,s])=>{
+        const pwr=(100*s.wins/s.games).toFixed(0);
+        const tl=s.results.map(r=>`<span class="tl tl-${r}">${r}</span>`).join('');
+        let trend='➡️';
+        if(s.games>=4){const m=Math.floor(s.games/2);const f=s.results.slice(0,m).filter(r=>r==='W').length/m;const sh=s.results.slice(m).filter(r=>r==='W').length/(s.games-m);if(sh-f>.1)trend='📈';else if(f-sh>.1)trend='📉';}
+        h+=`<tr><td><span style="color:${PLAYER_COLORS[pn]||'#666'}">●</span> <strong>${pn}</strong></td><td>${s.games}</td><td>${s.wins}</td><td><span class="badge ${pwr>=30?'badge-win':'badge-loss'}">${pwr}%</span></td><td>${tl}</td><td>${trend}</td></tr>`;
+    });
+    h+='</table></div>';
+    
+    h+=`<div class="card"><h3>📈 Progresja w czasie</h3><div class="chart-container"><canvas id="ch-dk-prog"></canvas></div></div>`;
+    h+='</div>';
+    
+    // Stats cards
+    h+='<div class="grid grid-3" style="margin-top:1.5rem">';
+    players.forEach(([pn,s])=>{
+        if(s.games<2)return;
+        const pwr=(100*s.wins/s.games).toFixed(0);
+        const maxW=s.results.join('').split('L').reduce((m,r)=>Math.max(m,r.length),0);
+        const maxL=s.results.join('').split('W').reduce((m,r)=>Math.max(m,r.length),0);
+        const first=s.dates[0];const last=s.dates[s.dates.length-1];
+        h+=`<div class="card"><h3 style="color:${PLAYER_COLORS[pn]||'#666'}">${pn}</h3>`;
+        h+=`<div class="stat-row"><span>Winrate</span><span class="badge ${pwr>=30?'badge-win':'badge-loss'}">${pwr}%</span></div>`;
+        h+=`<div class="stat-row"><span>Gry</span><span>${s.games}</span></div>`;
+        h+=`<div class="stat-row"><span>Max Win Streak</span><span>${maxW}</span></div>`;
+        h+=`<div class="stat-row"><span>Max Loss Streak</span><span>${maxL}</span></div>`;
+        h+=`<div class="stat-row"><span>Okres</span><span style="font-size:.8rem">${first.slice(0,7)} → ${last.slice(0,7)}</span></div>`;
+        h+='</div>';
+    });
+    h+='</div>';
+    
+    el.innerHTML=h;
+    
+    // Chart
+    if(document.getElementById('ch-dk-prog')){
+        const ctx=document.getElementById('ch-dk-prog').getContext('2d');
+        const datasets=players.filter(([,s])=>s.games>=2).map(([pn,s])=>{
+            let cw=0,cg=0;const pts=[];
+            s.dates.forEach((d,i)=>{cg++;if(s.results[i]==='W')cw++;pts.push({x:d.slice(5),y:+(100*cw/cg).toFixed(1)});});
+            return{label:pn,data:pts.map(p=>p.y),borderColor:PLAYER_COLORS[pn]||'#666',tension:.3,pointRadius:3,fill:false};
+        });
+        const maxLabels=Math.max(...datasets.map(d=>d.data.length));
+        const lbls=players.reduce((best,cur)=>cur[1].games>best[1].games?cur:best)[1].dates.map(d=>d.slice(5));
+        new Chart(ctx,{type:'line',data:{labels:lbls,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0',maxRotation:45}},y:{min:0,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+    }
+}
+
+function renderH2H(){
+    const el=document.getElementById('view-h2h');
+    const h2h={};
+    RAW_GAMES.forEach(g=>{
+        g.players.forEach(p1=>{
+            g.players.forEach(p2=>{
+                if(p1.name!==p2.name){
+                    const k=p1.name+'|'+p2.name;
+                    if(!h2h[k])h2h[k]={games:0,wins:0};
+                    h2h[k].games++;
+                    if(g.winner===p1.name)h2h[k].wins++;
+                }
+            });
+        });
+    });
+    let h='<div class="card"><h3>🆚 Head-to-Head Matrix</h3><p style="color:var(--text-dim);margin-bottom:1rem">Winrate gracza (wiersz) w grach z przeciwnikiem (kolumna)</p>';
+    h+='<div style="overflow-x:auto"><table class="h2h-table"><tr><th></th>';
+    ALL_PLAYERS.forEach(p=>{h+=`<th style="color:${PLAYER_COLORS[p]||'#666'}">${p}</th>`;});
+    h+='</tr>';
+    ALL_PLAYERS.forEach(p1=>{
+        h+=`<tr><td><strong style="color:${PLAYER_COLORS[p1]||'#666'}">${p1}</strong></td>`;
+        ALL_PLAYERS.forEach(p2=>{
+            if(p1===p2){h+='<td class="self">—</td>';}
+            else{
+                const k=p1+'|'+p2;const d=h2h[k];
+                if(d&&d.games>0){
+                    const wr=(100*d.wins/d.games).toFixed(0);
+                    const bg=wr>=40?'rgba(76,175,80,.2)':wr>=25?'rgba(255,255,255,.05)':'rgba(244,67,54,.2)';
+                    h+=`<td style="background:${bg}"><strong>${wr}%</strong><br><span style="font-size:.7rem;color:var(--text-dim)">${d.wins}/${d.games}</span></td>`;
+                }else h+='<td>—</td>';
+            }
+        });
+        h+='</tr>';
+    });
+    h+='</table></div></div>';
+    
+    // Rivalries
+    h+='<div class="card" style="margin-top:1.5rem"><h3>🔥 Najciekawsze rywalizacje</h3>';
+    const rivalries=[];
+    ALL_PLAYERS.forEach(p1=>{ALL_PLAYERS.forEach(p2=>{
+        if(p1<p2){
+            const k1=p1+'|'+p2,k2=p2+'|'+p1;
+            const d1=h2h[k1],d2=h2h[k2];
+            if(d1&&d1.games>=10){
+                const wr1=(100*d1.wins/d1.games).toFixed(0);
+                const wr2=(100*d2.wins/d2.games).toFixed(0);
+                const closeness=100-Math.abs(d1.wins-d2.wins)*100/d1.games;
+                rivalries.push({p1,p2,games:d1.games,w1:d1.wins,w2:d2.wins,wr1,wr2,closeness});
+            }
+        }
+    });});
+    rivalries.sort((a,b)=>b.closeness-a.closeness);
+    rivalries.forEach(r=>{
+        const bar1=Math.round(100*r.w1/(r.w1+r.w2));
+        h+=`<div style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;margin-bottom:.3rem"><span style="color:${PLAYER_COLORS[r.p1]}">${r.p1} (${r.wr1}%)</span><span style="color:var(--text-dim)">${r.games} gier</span><span style="color:${PLAYER_COLORS[r.p2]}">${r.p2} (${r.wr2}%)</span></div>`;
+        h+=`<div style="height:12px;background:${PLAYER_COLORS[r.p2]||'#666'};border-radius:6px;overflow:hidden"><div style="height:100%;width:${bar1}%;background:${PLAYER_COLORS[r.p1]||'#666'}"></div></div></div>`;
+    });
+    h+='</div>';
+    
+    // Dominance chart
+    h+='<div class="card" style="margin-top:1.5rem"><h3>📊 Dominacja (WR vs każdy przeciwnik)</h3><div class="chart-container" style="height:350px"><canvas id="ch-h2h-dom"></canvas></div></div>';
+    el.innerHTML=h;
+    
+    // Chart
+    const ctx=document.getElementById('ch-h2h-dom').getContext('2d');
+    const datasets=MAIN_PLAYERS.map(p1=>{
+        return{label:p1,data:MAIN_PLAYERS.map(p2=>{if(p1===p2)return null;const k=p1+'|'+p2;return h2h[k]?+(100*h2h[k].wins/h2h[k].games).toFixed(1):null;}),backgroundColor:PLAYER_COLORS[p1]+'88',borderColor:PLAYER_COLORS[p1],borderWidth:1};
+    });
+    new Chart(ctx,{type:'bar',data:{labels:MAIN_PLAYERS.map(p=>'vs '+p),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+}
+
+function renderFunFacts(){
+    const el=document.getElementById('view-funfacts');
+    let h='<h2 style="margin-bottom:1.5rem;color:var(--accent)">⭐ Ciekawostki i rekordy</h2>';
+    
+    const facts=[];
+    
+    // Best single session
+    let bestSess={wr:0};
+    Object.entries(DATA.players).forEach(([pn,pd])=>{
+        Object.entries(pd.sessions).forEach(([d,games])=>{
+            if(games.length>=3){const w=games.filter(g=>g.won).length;const wr=w/games.length;if(wr>bestSess.wr)bestSess={pn,d,w,t:games.length,wr};}
+        });
+    });
+    facts.push(`🏆 <strong>Najlepsza sesja ever:</strong> ${bestSess.pn} dnia ${bestSess.d} — ${bestSess.w}/${bestSess.t} wygranych (${(bestSess.wr*100).toFixed(0)}%)`);
+    
+    // Seba's record
+    const seba=DATA.players['Seba'];
+    if(seba)facts.push(`☠️ <strong>Rekord Seby:</strong> ${seba.games.length} gier i 0 wygranych. Jedyny gracz z 0% winrate w historii grupy.`);
+    
+    // Saka's dominance
+    const saka=DATA.players['Saka'];
+    if(saka){
+        facts.push(`👑 <strong>Saka jest w top 1</strong> z ${(100*saka.wins/saka.games.length).toFixed(0)}% winrate przy oczekiwanym ~30%. To +81% ponad expected value.`);
+        // Best deck
+        const bestDk=Object.entries(saka.decks).filter(([,s])=>s.games>=3).sort((a,b)=>b[1].wins/b[1].games-a[1].wins/a[1].games)[0];
+        if(bestDk)facts.push(`⚔️ <strong>Najgroźniejszy deck:</strong> Saka's ${bestDk[0]} — ${(100*bestDk[1].wins/bestDk[1].games).toFixed(0)}% WR (${bestDk[1].wins}/${bestDk[1].games})`);
+    }
+    
+    // Longest win streak overall
+    let maxStreak={len:0};
+    Object.entries(DATA.players).forEach(([pn,pd])=>{
+        let streak=0;pd.games.forEach(g=>{if(g.won){streak++;if(streak>maxStreak.len)maxStreak={pn,len:streak};}else streak=0;});
+    });
+    facts.push(`🔥 <strong>Najdłuższy win streak:</strong> ${maxStreak.pn} z ${maxStreak.len} wygranych z rzędu!`);
+    
+    // Longest loss streak
+    let maxLoss={len:0};
+    Object.entries(DATA.players).forEach(([pn,pd])=>{
+        let streak=0;pd.games.forEach(g=>{if(!g.won){streak++;if(streak>maxLoss.len)maxLoss={pn,len:streak};}else streak=0;});
+    });
+    facts.push(`💀 <strong>Najdłuższy loss streak:</strong> ${maxLoss.pn} z ${maxLoss.len} przegranych z rzędu`);
+    
+    // Most decks
+    const mostDecks=Object.entries(DATA.players).map(([pn,pd])=>({pn,n:Object.keys(pd.decks).length})).sort((a,b)=>b.n-a.n)[0];
+    facts.push(`🎨 <strong>Największy kolekcjoner:</strong> ${mostDecks.pn} z ${mostDecks.n} różnymi deckami`);
+    
+    // One-deck pony
+    Object.entries(DATA.players).forEach(([pn,pd])=>{
+        const topDeck=Object.entries(pd.decks).sort((a,b)=>b[1].games-a[1].games)[0];
+        if(topDeck&&topDeck[1].games/pd.games.length>=0.25&&pd.games.length>=10)
+            facts.push(`🐴 <strong>${pn}'s signature deck:</strong> ${topDeck[0]} (${topDeck[1].games}/${pd.games.length} gier = ${(100*topDeck[1].games/pd.games.length).toFixed(0)}% użycia)`);
+    });
+    
+    // First player stats overall
+    const fpWins=RAW_GAMES.filter(g=>g.winner===g.firstPlayer).length;
+    facts.push(`🎯 <strong>First Player Advantage:</strong> ${(100*fpWins/RAW_GAMES.length).toFixed(0)}% gier wygrywa gracz który zaczynał (${fpWins}/${RAW_GAMES.length})`);
+    
+    // Most improved
+    const improvements=Object.entries(DATA.players).filter(([,pd])=>pd.games.length>=20).map(([pn,pd])=>{
+        const mid=Math.floor(pd.games.length/2);const fh=pd.games.slice(0,mid);const sh=pd.games.slice(mid);
+        const fwr=100*fh.filter(g=>g.won).length/fh.length;const swr=100*sh.filter(g=>g.won).length/sh.length;
+        return{pn,diff:swr-fwr,fwr,swr};
+    }).sort((a,b)=>b.diff-a.diff);
+    if(improvements.length){
+        const best=improvements[0];const worst=improvements[improvements.length-1];
+        facts.push(`📈 <strong>Największy progres:</strong> ${best.pn} (+${best.diff.toFixed(1)}%: ${best.fwr.toFixed(0)}% → ${best.swr.toFixed(0)}%)`);
+        facts.push(`📉 <strong>Największy regres:</strong> ${worst.pn} (${worst.diff.toFixed(1)}%: ${worst.fwr.toFixed(0)}% → ${worst.swr.toFixed(0)}%)`);
+    }
+    
+    // Average games per session
+    const avgGPS=(RAW_GAMES.length/SESSIONS_SORTED.length).toFixed(1);
+    facts.push(`📊 <strong>Średnio ${avgGPS} gier per sesja</strong> (${RAW_GAMES.length} gier / ${SESSIONS_SORTED.length} sesji)`);
+    
+    // Deck that was tried and abandoned
+    const abandoned=[];
+    Object.entries(DATA.players).forEach(([pn,pd])=>{
+        Object.entries(pd.decks).forEach(([dk,s])=>{
+            if(s.games>=3&&s.wins===0)abandoned.push({pn,dk,games:s.games});
+        });
+    });
+    abandoned.sort((a,b)=>b.games-a.games);
+    if(abandoned.length)facts.push(`🪦 <strong>Decki-cmentarze (0 wygranych):</strong> ${abandoned.map(a=>`${a.pn}'s ${a.dk} (0/${a.games})`).join(', ')}`);
+    
+    // 3 vs 4 player games
+    const g3=RAW_GAMES.filter(g=>g.players.length===3).length;
+    const g4=RAW_GAMES.filter(g=>g.players.length===4).length;
+    facts.push(`👥 <strong>Format:</strong> ${g3} gier 3-osobowych (${(100*g3/RAW_GAMES.length).toFixed(0)}%) vs ${g4} gier 4-osobowych (${(100*g4/RAW_GAMES.length).toFixed(0)}%)`);
+    
+    // Nori's Prosper
+    const nori=DATA.players['Nori'];
+    if(nori&&nori.decks['Prosper']){
+        const pr=nori.decks['Prosper'];
+        facts.push(`✨ <strong>Nori's Prosper</strong> to jedyny deck z pozytywną progresją: WR rośnie z 33% do 56% w drugiej połowie kariery`);
+    }
+    
+    facts.forEach(f=>{h+=`<div class="fun-fact">${f}</div>`;});
+    
+    // Awards
+    h+='<div class="card" style="margin-top:2rem"><h3>🏅 Nagrody</h3><div class="grid grid-3" style="margin-top:1rem">';
+    const awards=[
+        {title:'👑 Król Stołu',player:'Saka',desc:'55% WR, absolutna dominacja'},
+        {title:'🎯 Pan Jednego Decka',player:'Nori',desc:'Prosper 44% WR - jedyny konsystentny deck'},
+        {title:'🎨 Kreator',player:'Saka',desc:'29 różnych decków w 91 grach'},
+        {title:'💪 Comeback King',player:'Kofaj',desc:'Od 0/6 do 20% WR - najszybszy wzrost'},
+        {title:'😢 Eternal Underdog',player:'Profit',desc:'19.8% WR, spadający trend'},
+        {title:'☠️ Legendarny Pacifist',player:'Seba',desc:'16 gier, 0 wygranych'}
+    ];
+    awards.forEach(a=>{
+        h+=`<div class="card" style="text-align:center;border:1px solid ${PLAYER_COLORS[a.player]||'#666'}"><div style="font-size:1.5rem;margin-bottom:.5rem">${a.title}</div><div class="stat-big" style="color:${PLAYER_COLORS[a.player]||'#666'};font-size:1.5rem">${a.player}</div><div class="stat-label">${a.desc}</div></div>`;
+    });
+    h+='</div></div>';
+    
+    el.innerHTML=h;
+}
+
+
+const DECK_COLORS = {"Abaddon": ["B", "R", "U"], "AbbadonNew": ["B", "R", "U"], "Alela": ["B", "U", "W"], "Anhelo": ["B", "R", "U"], "Anikthea": ["B", "G", "W"], "Anowon": ["B", "U"], "Astartes": ["B", "U", "W"], "Atraxa": ["B", "G", "U", "W"], "Bello": ["G", "R"], "Boros": ["R", "W"], "Breya": ["B", "R", "U", "W"], "CptMill": ["U"], "Edgar": ["B", "R", "W"], "Galea": ["G", "U", "W"], "Gishath": ["G", "R", "W"], "Hakbal": ["G", "U"], "Inspirit": ["W"], "Jirina": ["B", "R", "W"], "Kaalia": ["B", "R", "W"], "Kamiz": ["B", "U", "W"], "Kathril": ["B", "G", "W"], "Katilda": ["G", "W"], "Killian": ["B", "W"], "Knights": ["B", "R", "W"], "Krenko": ["R"], "Kykar": ["R", "U", "W"], "Lathril": ["B", "G"], "Legends": ["B", "G", "R", "U", "W"], "Liesa": ["B", "W"], "Mendicant": ["U", "W"], "Millicent": ["U", "W"], "Mirko": ["B", "U"], "Morophon": ["B", "G", "R", "U", "W"], "Necrobloom": ["B", "G", "W"], "Obuun": ["G", "R", "W"], "Omo": ["G", "U"], "Prosper": ["B", "R"], "Radtraxa": ["B", "G", "U", "W"], "Ranar": ["U", "W"], "Rex": ["G", "R", "W"], "Ruby": ["G", "R"], "Satya": ["R", "U", "W"], "Sauron": ["B", "R", "U"], "Sefris": ["B", "U", "W"], "Sephirot": ["W"], "ShalaiHallar": ["G", "R", "W"], "Sigarda": ["G", "W"], "Temmet": ["U", "W"], "ThaliaGitrog": ["B", "G", "W"], "Ulalek": ["B", "G", "R", "U", "W"], "UrDragon": ["B", "G", "R", "U", "W"], "Valgavoth": ["B"], "Vren": ["B", "U"], "Wilhelt": ["B", "U"], "Willowdusk": ["B", "G"], "Zur": ["B", "U", "W"]};
+const COLOR_HEX = {W:'#f9faf4',U:'#0e68ab',B:'#150b00',R:'#d3202a',G:'#00733e'};
+const COLOR_HEX_LIGHT = {W:'#fff8dc',U:'#4fc3f7',B:'#7c4dff',R:'#ff5252',G:'#69f0ae'};
+const COLOR_NAMES = {W:'White',U:'Blue',B:'Black',R:'Red',G:'Green'};
+
+function renderColors(){
+    const el=document.getElementById('view-colors');
+    
+    // Calculate stats
+    const colorStats={W:{games:0,wins:0},U:{games:0,wins:0},B:{games:0,wins:0},R:{games:0,wins:0},G:{games:0,wins:0}};
+    const numColorStats={};
+    const comboStats={};
+    const playerColorStats={};
+    const playerNumColorStats={};
+    
+    RAW_GAMES.forEach(g=>{
+        g.players.forEach(p=>{
+            const colors=DECK_COLORS[p.deck]||[];
+            const won=g.winner===p.name;
+            const n=colors.length;
+            if(!numColorStats[n])numColorStats[n]={games:0,wins:0};
+            numColorStats[n].games++;if(won)numColorStats[n].wins++;
+            
+            const combo=colors.slice().sort().join('')||'C';
+            if(!comboStats[combo])comboStats[combo]={games:0,wins:0};
+            comboStats[combo].games++;if(won)comboStats[combo].wins++;
+            
+            if(!playerColorStats[p.name])playerColorStats[p.name]={W:{g:0,w:0},U:{g:0,w:0},B:{g:0,w:0},R:{g:0,w:0},G:{g:0,w:0}};
+            if(!playerNumColorStats[p.name])playerNumColorStats[p.name]={};
+            if(!playerNumColorStats[p.name][n])playerNumColorStats[p.name][n]={g:0,w:0};
+            playerNumColorStats[p.name][n].g++;if(won)playerNumColorStats[p.name][n].w++;
+            
+            colors.forEach(c=>{
+                colorStats[c].games++;if(won)colorStats[c].wins++;
+                playerColorStats[p.name][c].g++;if(won)playerColorStats[p.name][c].w++;
+            });
+        });
+    });
+    
+    let h='<h2 style="margin-bottom:1.5rem;color:var(--accent)">🎨 Analiza Kolorów</h2>';
+    
+    // Overall color WR
+    h+='<div class="grid grid-2">';
+    h+='<div class="card"><h3>🌈 Winrate per kolor (ogólnie)</h3><div class="chart-container"><canvas id="ch-col-wr"></canvas></div></div>';
+    h+='<div class="card"><h3>📊 WR wg liczby kolorów</h3><div class="chart-container"><canvas id="ch-col-num"></canvas></div></div>';
+    h+='</div>';
+    
+    // Per player color radar
+    h+='<div class="grid grid-2" style="margin-top:1.5rem">';
+    h+='<div class="card"><h3>🎯 Profil kolorów per gracz (użycie %)</h3><div class="chart-container" style="height:350px"><canvas id="ch-col-radar"></canvas></div></div>';
+    h+='<div class="card"><h3>⚔️ WR per kolor per gracz</h3><div class="chart-container" style="height:350px"><canvas id="ch-col-pwr"></canvas></div></div>';
+    h+='</div>';
+    
+    // Combo table
+    h+='<div class="card" style="margin-top:1.5rem"><h3>🧩 Winrate kombinacji kolorów (min 5 gier)</h3>';
+    h+='<table><tr><th>Kombinacja</th><th>Kolory</th><th>Gry</th><th>WR</th><th>Bar</th></tr>';
+    const guildNames={WU:'Azorius',UB:'Dimir',BR:'Rakdos',RG:'Gruul',GW:'Selesnya',WB:'Orzhov',UR:'Izzet',BG:'Golgari',RW:'Boros',GU:'Simic',WUB:'Esper',UBR:'Grixis',BRG:'Jund',GRW:'Naya',GUW:'Bant',BRW:'Mardu',RUW:'Jeskai',BGW:'Abzan',BRU:'Grixis',BGRUW:'5-color',BGUW:'Non-Red'};
+    Object.entries(comboStats).filter(([,s])=>s.games>=5).sort((a,b)=>b[1].wins/b[1].games-a[1].wins/a[1].games).forEach(([combo,s])=>{
+        const wr=(100*s.wins/s.games).toFixed(1);
+        const name=guildNames[combo]||combo;
+        const dots=combo.split('').map(c=>`<span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${COLOR_HEX_LIGHT[c]||'#666'};margin-right:3px"></span>`).join('');
+        const barW=Math.round(wr);
+        h+=`<tr><td><strong>${name}</strong></td><td>${dots}</td><td>${s.games}</td><td><span class="badge ${wr>=30?'badge-win':'badge-loss'}">${wr}%</span></td><td><div class="wr-bar" style="width:150px"><div class="wr-bar-fill" style="width:${barW}%;background:${wr>=30?'var(--win)':'var(--loss)'}"></div></div></td></tr>`;
+    });
+    h+='</table></div>';
+    
+    // Mono vs multi per player
+    h+='<div class="card" style="margin-top:1.5rem"><h3>🎲 Mono vs Multi-color per gracz</h3>';
+    h+='<table><tr><th>Gracz</th><th>Mono WR</th><th>2-color WR</th><th>3-color WR</th><th>4+ color WR</th><th>Sweet spot</th></tr>';
+    ALL_PLAYERS.forEach(p=>{
+        const pns=playerNumColorStats[p]||{};
+        const cells=[1,2,3,4].map(n=>{
+            const d=pns[n];if(!d||d.g<2)return'<td>—</td>';
+            const wr=(100*d.w/d.g).toFixed(0);
+            return`<td><span class="badge ${wr>=30?'badge-win':'badge-loss'}">${wr}% (${d.g})</span></td>`;
+        });
+        // 4+ combine 4 and 5
+        const d4=(pns[4]||{g:0,w:0});const d5=(pns[5]||{g:0,w:0});
+        const combined={g:d4.g+d5.g,w:d4.w+d5.w};
+        const cell4=combined.g>=2?`<td><span class="badge ${100*combined.w/combined.g>=30?'badge-win':'badge-loss'}">${(100*combined.w/combined.g).toFixed(0)}% (${combined.g})</span></td>`:'<td>—</td>';
+        
+        // Find sweet spot
+        let best='—',bestWr=0;
+        [1,2,3].forEach(n=>{const d=pns[n];if(d&&d.g>=3){const wr=d.w/d.g;if(wr>bestWr){bestWr=wr;best=n+'-color';}}});
+        if(combined.g>=3){const wr=combined.w/combined.g;if(wr>bestWr){best='4+ color';}}
+        
+        h+=`<tr><td><strong>${p}</strong></td>${cells[0]}${cells[1]}${cells[2]}${cell4}<td>${best}</td></tr>`;
+    });
+    h+='</table></div>';
+    
+    // Fun color facts
+    h+='<div class="card" style="margin-top:1.5rem"><h3>🌟 Kolorowe ciekawostki</h3>';
+    const facts=[];
+    facts.push('🔴 <strong>Nori jest czerwony do szpiku kości</strong> — 89% jego gier zawiera Red (Krenko mono-R, Prosper BR, Sauron BRU)');
+    facts.push('⚪⚫ <strong>Orzhov (WB) to najsilniejsza 2-kolorowa kombinacja</strong> — 77.8% WR! (Killian, Liesa)');
+    facts.push('⚫🔴 <strong>Rakdos (BR) to drugi najlepszy duet</strong> — 41.7% WR (Prosper!)');
+    facts.push('🌈 <strong>5-kolorowe decki wygrywają 50%</strong> — ale grał nimi prawie wyłącznie Saka (Ulalek, UrDragon)');
+    facts.push('⚫🔴🔵 <strong>Grixis (UBR) jest pułapką</strong> — 14.8% WR mimo 27 gier. Abaddon i Sauron ciągną w dół');
+    facts.push('⚫🔴⚪ <strong>Mardu (BRW) też nie dowozi</strong> — 13.6% WR na 22 grach (Jirina, Kaalia)');
+    facts.push('📈 <strong>2-kolorowe decki to sweet spot</strong> — 38.3% WR ogólnie, najlepszy stosunek siły do konsystencji');
+    facts.push('🔵 <strong>Blue to najsłabszy kolor ogólnie</strong> — 27% WR. Kontrola nie działa w multiplayer?');
+    facts.push('🟢 <strong>Saka dominuje niezależnie od koloru</strong> — 49-59% WR w KAŻDYM kolorze');
+    facts.push('⚫ <strong>Black to jedyny kolor w którym Nori wygrywa >25%</strong> — 29% vs 9-25% reszta');
+    facts.forEach(f=>{h+=`<div class="fun-fact">${f}</div>`;});
+    h+='</div>';
+    
+    el.innerHTML=h;
+    
+    // === CHARTS ===
+    // Color WR bar
+    const cols=['W','U','B','R','G'];
+    new Chart(document.getElementById('ch-col-wr').getContext('2d'),{type:'bar',data:{labels:cols.map(c=>COLOR_NAMES[c]),datasets:[{label:'Winrate',data:cols.map(c=>(100*colorStats[c].wins/colorStats[c].games).toFixed(1)),backgroundColor:cols.map(c=>COLOR_HEX_LIGHT[c]+'88')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#eaeaea'}},y:{max:40,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+    
+    // Num colors bar
+    const ncs=Object.keys(numColorStats).sort();
+    new Chart(document.getElementById('ch-col-num').getContext('2d'),{type:'bar',data:{labels:ncs.map(n=>n+' kol.'),datasets:[{label:'WR',data:ncs.map(n=>(100*numColorStats[n].wins/numColorStats[n].games).toFixed(1)),backgroundColor:['#9e9e9e88','#4caf5088','#ff980088','#f4433688','#9c27b088']},{label:'Gry',data:ncs.map(n=>numColorStats[n].games),type:'line',borderColor:'#fff',yAxisID:'y1',pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{max:60,ticks:{color:'#a0a0b0',callback:v=>v+'%'}},y1:{position:'right',ticks:{color:'#a0a0b0'}}}}});
+    
+    // Radar - color usage per player
+    const radarPlayers=ALL_PLAYERS.filter(p=>playerColorStats[p]);
+    new Chart(document.getElementById('ch-col-radar').getContext('2d'),{type:'radar',data:{labels:cols.map(c=>COLOR_NAMES[c]),datasets:radarPlayers.map(p=>{const pg=DATA.players[p];const total=pg.games.length;return{label:p,data:cols.map(c=>(100*playerColorStats[p][c].g/total).toFixed(0)),borderColor:PLAYER_COLORS[p],backgroundColor:PLAYER_COLORS[p]+'22',pointRadius:3};})  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{r:{min:0,max:100,ticks:{color:'#a0a0b0',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,.1)'},pointLabels:{color:'#eaeaea',font:{size:13}}}}}});
+    
+    // Grouped bar - WR per color per player
+    new Chart(document.getElementById('ch-col-pwr').getContext('2d'),{type:'bar',data:{labels:cols.map(c=>COLOR_NAMES[c]),datasets:MAIN_PLAYERS.map(p=>{return{label:p,data:cols.map(c=>{const s=playerColorStats[p]?playerColorStats[p][c]:null;return s&&s.g>=3?(100*s.w/s.g).toFixed(1):null;}),backgroundColor:PLAYER_COLORS[p]+'88',borderColor:PLAYER_COLORS[p],borderWidth:1};})  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{max:70,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}});
+}
+
+
+
+// === DECK POWER RATING ===
+// Wilson Score Lower Bound (95% confidence)
+function wilsonScore(wins, games) {
+    if (games === 0) return 0;
+    const z = 1.96; // 95% CI
+    const p = wins / games;
+    const denom = 1 + z*z/games;
+    const center = p + z*z/(2*games);
+    const spread = z * Math.sqrt((p*(1-p) + z*z/(4*games)) / games);
+    return Math.max(0, (center - spread) / denom);
+}
+
+// Bayesian Average (with prior of global average + C virtual games)
+function bayesianAvg(wins, games, globalWr, C) {
+    return (wins + C * globalWr) / (games + C);
+}
+
+// Combined Power Score: Wilson * log2(games+1) bonus for volume
+function powerScore(wins, games) {
+    const wilson = wilsonScore(wins, games);
+    const volumeBonus = Math.log2(games + 1) / Math.log2(30); // normalized to ~30 games
+    return wilson * (0.7 + 0.3 * Math.min(1, volumeBonus)); // 70% wilson, 30% volume
+}
+
+function renderPowerRating() {
+    // Collect all player-deck combos
+    const allDecks = [];
+    const globalWins = Object.values(DATA.players).reduce((s,p)=>s+p.wins, 0);
+    const globalGames = RAW_GAMES.length * RAW_GAMES[0].players.length / RAW_GAMES.length; // avg players
+    const avgPlayersPerGame = RAW_GAMES.reduce((s,g)=>s+g.players.length,0) / RAW_GAMES.length;
+    const globalWr = globalWins / (RAW_GAMES.length * avgPlayersPerGame); // ~expected
+    const C = 5; // virtual games for Bayesian
+    
+    Object.entries(DATA.players).forEach(([player, pd]) => {
+        Object.entries(pd.decks).forEach(([deck, stats]) => {
+            if (stats.games >= 2) {
+                const wilson = wilsonScore(stats.wins, stats.games);
+                const bayes = bayesianAvg(stats.wins, stats.games, 0.28, C);
+                const power = powerScore(stats.wins, stats.games);
+                allDecks.push({
+                    player, deck, 
+                    games: stats.games, wins: stats.wins,
+                    rawWr: stats.wins/stats.games,
+                    wilson, bayes, power,
+                    results: stats.results
+                });
+            }
+        });
+    });
+    
+    allDecks.sort((a,b) => b.power - a.power);
+    
+    let h = '<h2 style="margin-bottom:1rem;color:var(--accent)">💪 Deck Power Rating</h2>';
+    h += '<p style="color:var(--text-dim);margin-bottom:1.5rem">Ranking uwzględniający zarówno winrate jak i liczbę gier. Wilson Score to dolna granica 95% przedziału ufności — im więcej gier, tym bliżej prawdziwego WR. Power Score = Wilson × bonus za volume.</p>';
+    
+    // Formula explanation
+    h += '<div class="card" style="margin-bottom:1.5rem"><h3>📐 Jak to działa?</h3>';
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-top:.5rem">';
+    h += '<div><strong>Raw WR</strong><br><span style="color:var(--text-dim)">Proste wins/games. Niereliable przy małym sample.</span></div>';
+    h += '<div><strong>Wilson Score</strong><br><span style="color:var(--text-dim)">Dolna granica 95% CI. "Jestem pewny że WR jest CO NAJMNIEJ X%"</span></div>';
+    h += '<div><strong>Bayesian Avg</strong><br><span style="color:var(--text-dim)">WR + 5 wirtualnych gier z avg WR. Ściąga outliers do średniej.</span></div>';
+    h += '<div><strong>Power Score</strong><br><span style="color:var(--text-dim)">Wilson × volume bonus. Nagradza decki które konsystentnie wygrywają DUŻO gier.</span></div>';
+    h += '</div></div>';
+    
+    // Top 20 chart
+    h += '<div class="card" style="margin-bottom:1.5rem"><h3>🏆 Top 20 Deck Power Rating</h3><div class="chart-container" style="height:500px"><canvas id="ch-power-top"></canvas></div></div>';
+    
+    // Full table
+    h += '<div class="card"><h3>📋 Pełny ranking</h3>';
+    h += '<table><tr><th>#</th><th>Gracz</th><th>Deck</th><th>Gry</th><th>Raw WR</th><th>Wilson</th><th>Bayesian</th><th>Power</th><th>Timeline</th></tr>';
+    allDecks.forEach((d, i) => {
+        const rawPct = (d.rawWr*100).toFixed(0);
+        const wilsonPct = (d.wilson*100).toFixed(1);
+        const bayesPct = (d.bayes*100).toFixed(1);
+        const powerPct = (d.power*100).toFixed(1);
+        const tl = d.results.map(r => `<span class="tl tl-${r}">${r}</span>`).join('');
+        const playerCol = PLAYER_COLORS[d.player] || '#666';
+        const highlight = i < 3 ? 'style="background:rgba(255,215,0,.05)"' : i < 10 ? 'style="background:rgba(76,175,80,.02)"' : '';
+        h += `<tr ${highlight}><td>${i+1}</td><td><span style="color:${playerCol}">●</span> ${d.player}</td><td><strong>${d.deck}</strong></td><td>${d.games}</td>`;
+        h += `<td>${rawPct}%</td><td><strong>${wilsonPct}%</strong></td><td>${bayesPct}%</td>`;
+        h += `<td><span class="badge ${d.power>=0.25?'badge-win':'badge-loss'}">${powerPct}</span></td>`;
+        h += `<td>${tl}</td></tr>`;
+    });
+    h += '</table></div>';
+    
+    // Insight: biggest diff between raw WR and Wilson
+    h += '<div class="card" style="margin-top:1.5rem"><h3>🔍 Biggest "Illusions" — decki które wyglądają lepiej niż są</h3>';
+    h += '<p style="color:var(--text-dim);margin-bottom:1rem">Największa różnica między Raw WR a Wilson Score = deck z małym sample który "kłamie"</p>';
+    const illusions = allDecks.filter(d=>d.games>=2).map(d=>({...d, gap: d.rawWr - d.wilson})).sort((a,b)=>b.gap-a.gap).slice(0,8);
+    illusions.forEach(d => {
+        const rawPct = (d.rawWr*100).toFixed(0);
+        const wilsonPct = (d.wilson*100).toFixed(0);
+        h += `<div class="fun-fact">${d.player}'s <strong>${d.deck}</strong>: Raw ${rawPct}% → Wilson ${wilsonPct}% (gap: -${(d.gap*100).toFixed(0)}pp, only ${d.games} games)</div>`;
+    });
+    h += '</div>';
+    
+    return {html: h, topDecks: allDecks.slice(0, 20)};
+}
+
+
+function renderPower() {
+    const el = document.getElementById('view-power');
+    const result = renderPowerRating();
+    el.innerHTML = result.html;
+    
+    // Chart
+    const top = result.topDecks;
+    const ctx = document.getElementById('ch-power-top').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: top.map(d => d.player.slice(0,4) + ': ' + d.deck),
+            datasets: [
+                {label: 'Power Score', data: top.map(d => +(d.power*100).toFixed(1)), backgroundColor: top.map(d => (PLAYER_COLORS[d.player]||'#666') + '88'), borderColor: top.map(d => PLAYER_COLORS[d.player]||'#666'), borderWidth: 1},
+                {label: 'Raw WR', data: top.map(d => +(d.rawWr*100).toFixed(1)), type: 'line', borderColor: '#ffffff66', borderDash: [3,3], pointRadius: 3, fill: false}
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: {legend: {labels: {color: '#eaeaea'}}},
+            scales: {x: {max: 100, ticks: {color: '#a0a0b0', callback: v => v + '%'}}, y: {ticks: {color: '#a0a0b0', font: {size: 11}}}}
+        }
+    });
+}
+
+
+const DECK_CMC = {"Abaddon": 5, "AbbadonNew": 5, "Alela": 4, "Anhelo": 3, "Anikthea": 5, "Anowon": 4, "Astartes": 6, "Atraxa": 4, "Balekor": 5, "Bello": 3, "Boros": 4, "Breya": 4, "Cesar": 4, "CptMill": 3, "Edgar": 6, "Galea": 4, "Gishath": 8, "Hakbal": 4, "Hearthhull": 5, "Inspirit": 3, "Jirina": 4, "Kaalia": 4, "Kamiz": 4, "Kathril": 5, "Katilda": 2, "Killian": 2, "Knights": 6, "Krenko": 4, "Kykar": 4, "Lathril": 4, "Legends": 5, "Liesa": 4, "Lyse": 3, "Mendicant": 2, "Millicent": 5, "Mirko": 3, "Morophon": 7, "Necrobloom": 4, "Obuun": 4, "Omo": 4, "Prosper": 4, "Radtraxa": 7, "Ranar": 4, "Rex": 5, "Ruby": 3, "Satya": 4, "Sauron": 5, "Sefris": 4, "Sephirot": 7, "ShalaiHallar": 4, "Sigarda": 4, "Temmet": 2, "ThaliaGitrog": 4, "Tidus": 4, "Ulalek": 5, "UrDragon": 9, "Valgavoth": 7, "Vren": 3, "Wilhelt": 4, "Willowdusk": 3, "Yshtola": 3, "Zur": 4};
+
+function renderCMC() {
+    const el = document.getElementById('view-cmc');
+    
+    // Calculate CMC stats
+    const cmcBuckets = {};
+    const playerCmc = {};
+    const scatterData = [];
+    
+    RAW_GAMES.forEach(g => {
+        g.players.forEach(p => {
+            const cmc = DECK_CMC[p.deck] || 4;
+            const won = g.winner === p.name;
+            if (!cmcBuckets[cmc]) cmcBuckets[cmc] = {games:0,wins:0};
+            cmcBuckets[cmc].games++; if(won) cmcBuckets[cmc].wins++;
+            if (!playerCmc[p.name]) playerCmc[p.name] = {};
+            const bucket = cmc<=3?'2-3':cmc===4?'4':cmc<=6?'5-6':'7+';
+            if (!playerCmc[p.name][bucket]) playerCmc[p.name][bucket] = {g:0,w:0};
+            playerCmc[p.name][bucket].g++; if(won) playerCmc[p.name][bucket].w++;
+        });
+    });
+    
+    // Scatter: per deck CMC vs WR (min 3 games)
+    const deckAgg = {};
+    RAW_GAMES.forEach(g => {
+        g.players.forEach(p => {
+            const key = p.name+'|'+p.deck;
+            if(!deckAgg[key]) deckAgg[key] = {g:0,w:0,cmc:DECK_CMC[p.deck]||4,player:p.name,deck:p.deck};
+            deckAgg[key].g++; if(g.winner===p.name) deckAgg[key].w++;
+        });
+    });
+    Object.values(deckAgg).filter(d=>d.g>=3).forEach(d => {
+        scatterData.push({x:d.cmc, y:+(100*d.w/d.g).toFixed(1), label:d.player+': '+d.deck, games:d.g, player:d.player});
+    });
+    
+    let h = '<h2 style="margin-bottom:1.5rem;color:var(--accent)">💰 Mana Cost vs Performance</h2>';
+    h += '<p style="color:var(--text-dim);margin-bottom:1.5rem">Czy tańsi commanderzy wygrywają częściej? Analiza korelacji CMC (converted mana cost) z winrate.</p>';
+    
+    // Key insight
+    h += '<div class="grid grid-4" style="margin-bottom:1.5rem">';
+    h += '<div class="card"><div class="stat-big" style="color:#4caf50">45.5%</div><div class="stat-label">WR tanich (CMC ≤3)</div></div>';
+    h += '<div class="card"><div class="stat-big" style="color:#ff9800">27.7%</div><div class="stat-label">WR średnich (CMC 4)</div></div>';
+    h += '<div class="card"><div class="stat-big" style="color:#f44336">25.0%</div><div class="stat-label">WR drogich (CMC 5-6)</div></div>';
+    h += '<div class="card"><div class="stat-big" style="color:var(--accent)">r = -0.13</div><div class="stat-label">Korelacja Pearsona</div></div>';
+    h += '</div>';
+    
+    // Charts
+    h += '<div class="grid grid-2">';
+    h += '<div class="card"><h3>📊 WR wg CMC (ogólnie)</h3><div class="chart-container"><canvas id="ch-cmc-bar"></canvas></div></div>';
+    h += '<div class="card"><h3>🎯 Scatter: CMC vs Winrate per deck</h3><div class="chart-container"><canvas id="ch-cmc-scatter"></canvas></div></div>';
+    h += '</div>';
+    
+    h += '<div class="grid grid-2" style="margin-top:1.5rem">';
+    h += '<div class="card"><h3>👤 CMC preference per gracz</h3><div class="chart-container"><canvas id="ch-cmc-player"></canvas></div></div>';
+    h += '<div class="card"><h3>📈 Korelacja per gracz</h3>';
+    h += '<table><tr><th>Gracz</th><th>Korelacja</th><th>Kierunek</th><th>Interpretacja</th></tr>';
+    const corrData = [
+        ['Saka', -0.001, 'Brak', 'CMC nie ma wpływu - wygrywa wszystkim'],
+        ['Profit', -0.378, '📉 Tanie lepsze', 'Drogie decki go niszczą (Jirina, Kaalia)'],
+        ['Nori', -0.420, '📉 Tanie lepsze', 'Gishath(8), Sauron(5) ciągną w dół'],
+        ['Kofaj', +0.179, '📈 Drogie lepsze', 'Ale za mały sample size']
+    ];
+    corrData.forEach(([name,r,dir,interp]) => {
+        const col = r<-0.2?'badge-win':r>0.2?'badge-loss':'badge-neutral';
+        h += `<tr><td><strong>${name}</strong></td><td><span class="badge ${col}">${r>0?'+':''}${r.toFixed(3)}</span></td><td>${dir}</td><td style="font-size:.85rem;color:var(--text-dim)">${interp}</td></tr>`;
+    });
+    h += '</table></div></div>';
+    
+    // Insights
+    h += '<div class="card" style="margin-top:1.5rem"><h3>🧠 Wnioski</h3>';
+    h += '<div class="fun-fact">📊 <strong>Istnieje słaba negatywna korelacja (r=-0.13)</strong> między kosztem commandera a winrate. Nie jest silna statystycznie, ale trend jest widoczny.</div>';
+    h += '<div class="fun-fact">🏆 <strong>Tanie commandery (CMC ≤3) wygrywają 45.5%</strong> vs drogie (CMC 5-6) 25%. Różnica +14.3pp!</div>';
+    h += '<div class="fun-fact">🎯 <strong>Killian (CMC 2) ma 86% WR</strong> — najtańszy i najskuteczniejszy commander w całej grupie.</div>';
+    h += '<div class="fun-fact">🦖 <strong>Gishath (CMC 8) ma 20% WR na 25 grach</strong> — drogie commandery nie nadrabiają lategame'em.</div>';
+    h += '<div class="fun-fact">👤 <strong>Nori ma najsilniejszą korelację (r=-0.42)</strong>: Prosper (CMC 4) = 44% WR, Sauron (CMC 5) = 12%, Gishath (CMC 8) = 19%.</div>';
+    h += '<div class="fun-fact">⚖️ <strong>Sweet spot to CMC 2-4.</strong> Za tanie i szybkie na stół, bez ryzyka że nie odpalą. CMC 5+ commandery dają czas przeciwnikom na setup.</div>';
+    h += '</div>';
+    
+    el.innerHTML = h;
+    
+    // Charts
+    const cmcKeys = Object.keys(cmcBuckets).map(Number).sort((a,b)=>a-b);
+    new Chart(document.getElementById('ch-cmc-bar').getContext('2d'), {
+        type:'bar',
+        data:{
+            labels:cmcKeys.map(c=>'CMC '+c),
+            datasets:[
+                {label:'Winrate',data:cmcKeys.map(c=>(100*cmcBuckets[c].wins/cmcBuckets[c].games).toFixed(1)),backgroundColor:cmcKeys.map(c=>c<=3?'#4caf5088':c<=4?'#ff980088':c<=6?'#f4433688':'#9c27b088')},
+                {label:'# Gier',data:cmcKeys.map(c=>cmcBuckets[c].games),type:'line',borderColor:'#fff8',yAxisID:'y1',pointRadius:4}
+            ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{max:80,ticks:{color:'#a0a0b0',callback:v=>v+'%'}},y1:{position:'right',ticks:{color:'#a0a0b0'}}}}
+    });
+    
+    // Scatter
+    new Chart(document.getElementById('ch-cmc-scatter').getContext('2d'), {
+        type:'scatter',
+        data:{
+            datasets: MAIN_PLAYERS.map(p => ({
+                label: p,
+                data: scatterData.filter(d=>d.player===p).map(d=>({x:d.x,y:d.y})),
+                backgroundColor: PLAYER_COLORS[p]+'aa',
+                borderColor: PLAYER_COLORS[p],
+                pointRadius: scatterData.filter(d=>d.player===p).map(d=>3+d.games/3),
+            }))
+        },
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{labels:{color:'#eaeaea'}},tooltip:{callbacks:{label:function(ctx){const d=scatterData.filter(s=>s.player===MAIN_PLAYERS[ctx.datasetIndex]);return d[ctx.dataIndex]?d[ctx.dataIndex].label+' ('+d[ctx.dataIndex].games+' gier)':'';}} } },
+            scales:{x:{title:{display:true,text:'CMC',color:'#eaeaea'},ticks:{color:'#a0a0b0'}},y:{title:{display:true,text:'Winrate %',color:'#eaeaea'},max:100,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}
+        }
+    });
+    
+    // Player CMC preference grouped bar
+    const buckets = ['2-3','4','5-6','7+'];
+    new Chart(document.getElementById('ch-cmc-player').getContext('2d'), {
+        type:'bar',
+        data:{
+            labels: buckets.map(b=>'CMC '+b),
+            datasets: MAIN_PLAYERS.map(p => ({
+                label: p,
+                data: buckets.map(b => {const s=playerCmc[p]?playerCmc[p][b]:null; return s&&s.g>=2?(100*s.w/s.g).toFixed(1):null;}),
+                backgroundColor: PLAYER_COLORS[p]+'88',
+                borderColor: PLAYER_COLORS[p],
+                borderWidth: 1
+            }))
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#eaeaea'}}},scales:{x:{ticks:{color:'#a0a0b0'}},y:{max:70,ticks:{color:'#a0a0b0',callback:v=>v+'%'}}}}
+    });
+}
+
+// Navigation update
+function showView(name){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.getElementById('view-'+name).classList.add('active');
+    event.target.classList.add('active');
+    const r={overview:renderOverview,players:renderPlayers,decks:renderDecks,h2h:renderH2H,funfacts:renderFunFacts,colors:renderColors,power:renderPower,cmc:renderCMC};
+    if(!window['_'+name+'Done']){r[name]();window['_'+name+'Done']=true;}
+}
+
+// Init
+renderOverview();
+
+</script>
+</body>
+</html>
